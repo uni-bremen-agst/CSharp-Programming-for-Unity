@@ -154,6 +154,14 @@ public int Score { get; set; }
 public static Vector3 operator +(Vector3 a, Vector3 b)
   => new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
   \end{lstlisting}
+  \pause
+  \vfill
+  
+  \hint{The \texttt{==} operator for \texttt{GameObject} is overloaded.
+  When you evaluate myGameObject == null, Unity isn't just checking if the C\# reference 
+  is empty. It is checking if the underlying native C++ engine object has been 
+  destroyed. The C++ object is destroyed only at the end of the frame.}
+  
 \end{frame}
 
 \begin{frame}{Exceptions}
@@ -203,6 +211,10 @@ names
   \item Generics: C\# generics are reified (the type is known at run
     time); Java generics use type erasure.
   \end{itemize}
+  \vfill
+  
+  \hint{Do not use \texttt{var}. You would suppress important type information.}
+  
 \end{frame}
 
 \begin{frame}{Takeaways for Unity}
@@ -217,6 +229,12 @@ names
   \item Coroutines (\texttt{IEnumerator} + \texttt{yield return}) provide
     cooperative multitasking with no direct Java counterpart.
   \end{itemize}
+  \pause
+  \vfill
+  
+  \hint{A \texttt{struct} assignment always copies -- if you mutate a
+    struct returned by a property or method, you are mutating a
+    temporary copy, not the original.}
 \end{frame}
 
 %%% Local Variables:
