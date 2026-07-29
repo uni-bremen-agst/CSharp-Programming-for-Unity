@@ -180,6 +180,26 @@ public partial class Player
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Delegates, Lambdas, and Events: Example}
+  \begin{lstlisting}
+delegate void Notify(string msg);
+
+class Alarm {
+  public event Notify Triggered;
+
+  public void Fire() {
+    Triggered?.Invoke("Alarm!");
+  }
+}
+
+Alarm a = new Alarm();
+a.Triggered += msg => Console.WriteLine(msg);
+a.Fire();
+  \end{lstlisting}
+  \hint{\texttt{event} hides the subscriber list, exposing only
+    \texttt{+=}/\texttt{-=} to subscribe or unsubscribe.}
+\end{frame}
+
 \begin{frame}[fragile]{Operator Overloading}
   \begin{itemize}
   \item Java: not allowed (the \texttt{+} operator on \texttt{String}
