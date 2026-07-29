@@ -4,6 +4,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage[american]{babel}
+\usepackage{fontawesome5}
 
 %%% for listings
 \xdefinecolor{mygray}{gray}{.90}
@@ -58,6 +59,19 @@
 \mode<handout>{%
 \newcommand{\incxtex}[1]{\input{figures/#1.xtex}}
 \newcommand{\incgraphics}[2]{\includegraphics[#1]{#2}}
+}
+
+%%% Hint box for additional remarks on a slide
+%%% Usage: \hint{some text}  or  \hint[Tip]{some text}
+\definecolor{hintbg}{RGB}{255,248,220}    % light amber
+\definecolor{hinttitlebg}{RGB}{255,193,7} % amber
+\setbeamercolor{hint title}{bg=hinttitlebg,fg=black}
+\setbeamercolor{hint body}{bg=hintbg,fg=black}
+
+\newcommand{\hint}[2][Hint]{%
+  \begin{beamerboxesrounded}[upper=hint title,lower=hint body,shadow=true]{\faLightbulb\ #1}%
+    #2%
+  \end{beamerboxesrounded}%
 }
 
 \begin{document}
