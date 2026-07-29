@@ -1,0 +1,106 @@
+%%% -*- coding: utf-8 -*-
+
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[american]{babel}
+
+%%% for listings
+\xdefinecolor{mygray}{gray}{.90}
+\xdefinecolor{commentcolor}{RGB}{178,34,34}% firebrick
+\xdefinecolor{stringcolor}{RGB}{34,139,34} % forest green
+\xdefinecolor{keywordcolor}{RGB}{0,0,205}  % medium blue
+\xdefinecolor{literalcolor}{RGB}{95,158,160}    % cadet blue
+\lstset{
+  basicstyle=\footnotesize,
+  commentstyle=\color{commentcolor}\slshape,
+  stringstyle=\color{stringcolor},
+  keywordstyle=\color{keywordcolor},
+  language=[Sharp]C,
+}
+
+\lstdefinestyle{numbers}
+    {escapeinside='`, numbers=left, stepnumber=1, numberstyle=\tiny, numbersep=5pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Slide Style
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\beamertemplatetransparentcovereddynamic
+\beamertemplateballitem
+\beamertemplatesolidbuttons
+
+%%% Background of handouts
+\mode<handout>{\beamertemplatesolidbackgroundcolor{white!100}}
+
+\setbeamercovered{invisible} % hidden text complete invisible
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamerfont{alerted text}{series=\bfseries}
+\setbeamercolor{alerted text}{fg=blue}
+
+\mode<handout>{%
+\beamertemplatesolidbackgroundcolor{white!100}%
+\setbeamertemplate{background canvas}[default]%
+\setbeamercolor{background canvas}{bg=}
+\setbeamerfont{note page}{size=\tiny}
+\setbeamerfont{itemize/enumerate subbody}{size=\tiny}
+\setbeamerfont{itemize/enumerate subsubbody}{size=\tiny}
+}
+
+\setbeamertemplate{footline}[frame number]{} 
+\setbeamertemplate{note page}[plain]
+
+\mode<beamer>{%
+\newcommand{\incxtex}[1]{\colorbox{black!30}{\input{figures/#1.xtex}}}
+\newcommand{\incgraphics}[2]{\colorbox{black!30}{\includegraphics[#1]{#2}}}
+}
+\mode<handout>{%
+\newcommand{\incxtex}[1]{\input{figures/#1.xtex}}
+\newcommand{\incgraphics}[2]{\includegraphics[#1]{#2}}
+}
+
+\begin{document}
+
+\title{C\# Programming for Unity}
+\author{Rainer~Koschke}
+\institute[University of Bremen]{
+  Department for mathematics and informatics\\
+  Group \emph{Software Engineering}\\
+  University of Bremen, Germany}
+
+%%% Title and overview
+%%% First argument: Main title of the section
+%%% Second argument: Subtitle of the section
+
+\mode<beamer>{%
+\newcommand{\showtitlepage}[2]{%
+  \date[]{}%
+  \subtitle{\textcolor{blue}{\textbf{\Huge #1}}\\%
+    \textcolor{blue}{\textbf{\Large #2}}}%
+  \frame[plain]{\titlepage}%
+}}
+\mode<handout>{%
+  \newcommand{\showtitlepage}[2]{%
+    \ifdefined\titlePagePrinted%
+    \else%
+    \def\titlePagePrinted{1}%
+    \frame[plain]{\titlepage}%
+    \fi
+}}
+
+\input{content}
+
+\frame[allowframebreaks]{
+   \bibliographystyle{chicago}
+   \bibliography{./references}
+}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
