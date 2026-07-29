@@ -66,10 +66,8 @@ public int Score {
 public int Score { get; set; }
       \end{lstlisting}
   \end{columns}
-  \begin{itemize}
-  \item Properties look like fields to the caller (\texttt{obj.Score = 3;})
-    but behave like methods.
-  \end{itemize}
+  Properties look like fields to the caller (\texttt{obj.Score = 3;})
+  but behave like methods.
 \end{frame}
 
 \begin{frame}{Value Types vs.\ Reference Types}
@@ -198,6 +196,53 @@ a.Fire();
   \end{lstlisting}
   \hint{\texttt{event} hides the subscriber list, exposing only
     \texttt{+=}/\texttt{-=} to subscribe or unsubscribe.}
+\end{frame}
+
+\begin{frame}[fragile]{Action and Func}
+  \begin{itemize}
+  \item \texttt{Action<T1,...>} is a predefined generic delegate for
+    a method returning \texttt{void}.
+  \item \texttt{Func<T1,...,TResult>} is a predefined generic delegate
+    for a method returning \texttt{TResult} (the last type parameter).
+  \item Both come from the framework -- no need to declare your own
+    \texttt{delegate} type for common cases.
+  \end{itemize}
+  \begin{lstlisting}
+Action<string> print = msg => Console.WriteLine(msg);
+print("Hello");
+
+Func<int, int, int> add = (a, b) => a + b;
+int sum = add(3, 4); // 7
+
+Func<int, bool> isEven = n => n % 2 == 0;
+List<int> numbers = new List<int> { 1, 2, 3, 4 };
+List<int> evens = numbers.Where(isEven).ToList();
+  \end{lstlisting}
+  \hint{\texttt{Predicate<T>} is just a named alias for
+    \texttt{Func<T, bool>}, used e.g.\ by \texttt{List<T>.Find}.}
+\end{frame}
+
+\begin{frame}[fragile]{Action and Func as Parameters}
+  \texttt{Action}/\texttt{Func} are especially handy as
+  \emph{parameter types} -- a method can accept a piece of behavior
+  without declaring a custom delegate or interface for it.
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static void Process(List<int> items, Action<int> onEach) {
+  foreach (int item in items) onEach(item);
+}
+
+static int Reduce(List<int> items, int seed,
+                   Func<int, int, int> combine) {
+  int result = seed;
+  foreach (int item in items) result = combine(result, item);
+  return result;
+}
+
+List<int> numbers = new List<int> { 1, 2, 3, 4 };
+Process(numbers, n => Console.WriteLine(n));
+int sum = Reduce(numbers, 0, (a, b) => a + b); // 10
+  \end{lstlisting}
+  \hint{Unity APIs do this a lot, e.g.\ \texttt{button.onClick.AddListener(Action)}.}
 \end{frame}
 
 \begin{frame}[fragile]{Operator Overloading}
