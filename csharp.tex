@@ -115,6 +115,43 @@ public int Score { get; set; }
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Partial Classes: One Type, Multiple Files}
+  \begin{itemize}
+  \item Java: a (non-nested) class must be fully defined in a single file.
+  \item C\#: the \texttt{partial} keyword lets you split the definition
+    of one class, struct, or interface across several files -- the
+    compiler merges all parts into a single type.
+  \end{itemize}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \textbf{Player.cs}
+      \begin{lstlisting}
+public partial class Player
+{
+  public int Health;
+
+  public void Move() { ... }
+}
+      \end{lstlisting}
+    \column{0.5\textwidth}
+      \textbf{Player.Combat.cs}
+      \begin{lstlisting}
+public partial class Player
+{
+  public void Attack() { ... }
+}
+      \end{lstlisting}
+  \end{columns}
+  
+  Every part needs the \texttt{partial} keyword, lives in the
+  same namespace and assembly, and must agree on access modifier
+  and base class/interfaces.
+  
+  \hint{Can be used to split large classes into more cohesive parts.
+  However, it is generally better to avoid larges classes altogether.}
+  
+\end{frame}
+
 \begin{frame}{Access Modifiers}
   \begin{itemize}
   \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
