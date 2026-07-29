@@ -2,6 +2,105 @@
 
 \input{overview}
 \input{csharp}
+\input{linq}
+\input{nunit}
+
+\endinput
+
+Part A — Basic C#
+Syntax & types: classes, structs, enums, generics, nullable types (examples: AbstractSEECity and subclasses)
+OOP fundamentals in C#: inheritance, interfaces, abstract classes, polymorphism
+Collections & LINQ (heavily used in graph/layout code, e.g. TreeMap.cs)
+Exceptions and defensive coding at API boundaries
+File I/O and serialization basics (JSON/XML)
+Unit testing with NUnit
+
+Part B — Advanced C#
+Asynchronous programming: async/await, Task, cancellation tokens
+UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
+Delegates, events, and the observer pattern (heavily used for decoupled game-state notifications)
+Reflection & attributes (custom attributes drive serialization/config in DataModel/DG)
+Design patterns: Factory, Strategy, Command (action system in Controls/Actions)
+Generics & constraints for reusable algorithms
+Memory management & performance: structs vs. classes, boxing, allocation avoidance in per-frame code
+Concurrency/thread-safety basics (for networked and background operations)
+
+Part C — Basic Unity
+Unity Editor workflow: scenes, prefabs, GameObjects, components
+MonoBehaviour lifecycle (Awake, Start, Update, coroutines)
+Transform hierarchy, parenting, prefab variants
+ScriptableObjects for data-driven configuration
+Unity's new Input System (com.unity.inputsystem) — actions, bindings, multiple control schemes
+UI Toolkit / uGUI basics for in-game panels and charts
+Physics basics: colliders, raycasting (used for object selection/interaction)
+Materials, shaders basics, and the Universal Render Pipeline (URP) asset pipeline
+
+Part D — Advanced Unity
+Networking with Netcode for GameObjects: NetworkBehaviour, NetworkVariable, RPCs, ownership/authority — core to this project's multiplayer action-synchronization model (Assets/SEE/Net/Actions)
+XR development: XR Interaction Toolkit 3.x, OpenXR, XR Origin/Rig setup, interactors/interactables, teleportation locomotion (XRRig.prefab, Teleport Interactor.prefab)
+Custom rendering: Shader Graph, post-processing stacks (Beautify), URP renderer features
+Animation systems: Animator/Timeline, DOTween tweening, procedural/IK animation (VRIK avatars, SALSA lip-sync)
+Third-party SDK integration patterns: Dissonance (voice chat), LiveKit, OpenAI Unity SDK
+Editor tooling: custom inspectors/editors, PropertyDrawers for config classes
+Addressables/Resources & asset streaming (StreamingAssets, prefab loading at runtime)
+Profiling & performance tuning for VR framerate targets (Burst/Collections packages present)
+Build pipeline across platforms (desktop + VR headsets), player settings, XR provider configuration
+
+Part E — Project-Domain-Specific Skills
+Graph data structures & algorithms: directed graphs, the project's own DataModel/DG model, GXL import/export, graph providers
+Software-visualization concepts: code-city metaphor, treemap/rectangle-packing/incremental-treemap layout algorithms
+Software metrics & reflexion analysis (architecture-conformance checking, HolisticMetrics/Metrics/ReflexionMetrics.cs)
+Synchronizing simulation state over a network (net actions mirroring local actions — a recurring architectural pattern here)
+Collaborative/multi-user VR interaction design (shared avatars, drawable whiteboards, spatial voice chat)
+Working with external tool integrations (IDE hooks in Assets/SEE/IDE, Axivion analysis pipeline)
+
+Format per day (identical all 5 days):
+
+Time	Block	Length
+09:00–10:30	Lecture (Theory)	90 min
+10:30–10:45	Break	15 min
+10:45–12:00	Exercise (Practice)	75 min
+12:00–13:00	Lunch	60 min
+13:00–14:15	Lecture (Theory)	75 min
+14:15–14:30	Break	15 min
+14:30–16:00	Exercise (Practice)	90 min
+
+Day 1 — C# Foundations for Unity
+09:00 Theory: Unity Editor workflow, GameObject/Component/Prefab model, MonoBehaviour lifecycle, ScriptableObjects for data-driven config (general Unity literacy) — then a short contrast segment: SEE itself does not use ScriptableObjects anywhere in Assets/SEE; instead it configures things via plain [Serializable] attribute classes (e.g. LayoutSettings.cs → VisualAttributes.cs) read/written through its own IO layer (DataModel/DG/IO, Layout/IO), rather than as Unity asset instances.
+10:45 Exercise: Two-part — (a) the original ScriptableObject config asset exercise for general Unity fluency, then (b) re-implement the same config as a plain [Serializable] class following SEE's own pattern, so students see both side by side and understand why the project chose the latter (config lives in human-editable text files, not binary .asset files, which matters for version control and headless/CLI use).
+
+13:00 Theory: Delegates & events, Observer/Strategy/Factory patterns (mirrors Controls/Actions action-type system); async/await and UniTask basics.
+14:30 Exercise: Build a small pub/sub event system (e.g., a "SelectionChanged" event with multiple listeners) and one async/UniTask method that "loads" a fake config file without blocking.
+
+Day 2 — Unity Basics: Editor, Lifecycle, Input, Selection
+09:00 Theory: Unity Editor workflow (scenes, prefabs, components), MonoBehaviour lifecycle, ScriptableObjects for data-driven config.
+10:45 Exercise: Build a scene with a prefab whose script logs lifecycle events; create a ScriptableObject asset that configures the prefab's behavior at runtime.
+
+13:00 Theory: New Input System (actions/bindings), physics raycasting for object picking, uGUI/UI Toolkit basics.
+14:30 Exercise: Implement click-to-select via raycast on a set of cube "nodes," and show the selected object's name/attributes in a UI panel — a miniature of SEE's node-inspection interaction.
+
+Day 3 — Advanced Unity: Rendering, Animation, Editor Tooling
+09:00 Theory: URP pipeline, materials & Shader Graph basics, post-processing concepts (as used by Beautify in this project).
+10:45 Exercise: Create a URP material and a simple Shader Graph highlight/outline effect, applied to the previously selected node.
+
+13:00 Theory: Animation & tweening — Animator/Timeline overview, DOTween sequences; writing custom inspectors/PropertyDrawers.
+14:30 Exercise: Animate the selection highlight with a DOTween pulse/scale tween, and write a custom inspector for the Day-2 ScriptableObject config.
+
+Day 4 — Networking & XR
+09:00 Theory: Netcode for GameObjects fundamentals — NetworkBehaviour, NetworkVariable, ServerRpc/ClientRpc, ownership/authority; how SEE mirrors local user actions as networked "net actions" for multi-user consistency (Assets/SEE/Net/Actions).
+10:45 Exercise: Turn the Day-2/3 selection+highlight into a networked action: selecting a node on one client replicates the highlight on a second connected client via NetworkVariable + RPC.
+
+13:00 Theory: XR Interaction Toolkit + OpenXR — XR Origin/Rig setup, interactors/interactables, teleportation locomotion; brief note on avatar/voice integration (VRIK, Dissonance) as used in this project.
+14:30 Exercise: Set up an XR Origin rig (XR Device Simulator if no headset available), add a grab interactable and a teleportation area; try selecting a node via XR ray interactor instead of mouse.
+
+Day 5 — Software-Visualization Domain + Capstone
+09:00 Theory: Graph data structures & the project's DG/GXL model; layout algorithms as a visualization technique (treemap, rectangle-packing, incremental treemap — Assets/SEE/Layout/NodeLayouts).
+10:45 Exercise: Implement a minimal recursive treemap-subdivision algorithm over a small synthetic tree of nodes and render the resulting rectangles.
+
+13:00 Theory: Software metrics & reflexion analysis concepts; contribution workflow (code style, tests via NUnit, PR review expectations).
+14:30 Capstone Exercise: Integrate the week — extend a mini "code city" scene: select a node (Day 2), animate the highlight (Day 3), broadcast the selection to a second client over the network (Day 4), laid out via the Day-5 treemap algorithm. Close with short student demos/Q&A.
+
+Notes on pacing: Each day's exercise builds directly on the prior day's, so the capstone on Day 5 requires no new infrastructure — only synthesis. If a group falls behind on hands-on time, the Day 3 shader/tooling exercise is the safest one to trim, since it's the least load-bearing for the capstone.
 
 %%% Local Variables:
 %%% mode: latex
