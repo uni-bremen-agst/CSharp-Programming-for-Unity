@@ -83,19 +83,26 @@
   Group \emph{Software Engineering}\\
   University of Bremen, Germany}
 
+%\lecture[Short Name]{Long Lecture Name}{Label}
+%
+% Short Name (optional): Displayed (depending on the theme) in the header or footer of the navigation bar.
+% Long Lecture Name: Can be used for title slides or table of contents (e.g., using the \insertlecture command).
+% Label: A unique, internal identifier for this specific lecture.
+
+
 %%% Title and overview
-%%% First argument: Main title of the section
-%%% Second argument: Subtitle of the section
+%%% Only argument: Subtitle of the section
+%%% The main title is the long name of the enclosing \lecture.
 
 \mode<beamer>{%
-\newcommand{\showtitlepage}[2]{%
+\newcommand{\showtitlepage}[1]{%
   \date[]{}%
-  \subtitle{\textcolor{blue}{\textbf{\Huge #1}}\\%
-    \textcolor{blue}{\textbf{\Large #2}}}%
+  \subtitle{\textcolor{blue}{\textbf{\Huge \insertlecture}}\\%
+    \textcolor{blue}{\textbf{\Large #1}}}%
   \frame[plain]{\titlepage}%
 }}
 \mode<handout>{%
-  \newcommand{\showtitlepage}[2]{%
+  \newcommand{\showtitlepage}[1]{%
     \ifdefined\titlePagePrinted%
     \else%
     \def\titlePagePrinted{1}%
