@@ -1,0 +1,18 @@
+# Line endings
+#
+# Text files are stored with LF in the repository, whatever line endings they
+# have in the working tree. Each developer's working tree keeps following their
+# own core.autocrlf/core.eol setting; only what is committed is normalized.
+
+* text=auto
+
+# Always text, even where Git's heuristic might decide otherwise.
+*.tex text
+*.bib text
+*.md  text
+
+# Never convert these.
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
