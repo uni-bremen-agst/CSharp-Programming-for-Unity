@@ -71,6 +71,8 @@ public int Score { get; set; }
 \begin{exerciseframe}{Port a Java Bean}
   Rewrite this class in C\#, following the C\# naming conventions and
   replacing the getter/setter pair by a property. Adapt the caller as well.
+  \vspace{1ex}
+
   \begin{columns}[T]
     \column{0.52\textwidth}
       \textbf{Counter.java}
@@ -124,6 +126,9 @@ c.Increment();
 Console.WriteLine(c.Count);
       \end{lstlisting}
   \end{columns}
+
+  \vspace{3ex}
+
   \hint{The auto-implemented property provides the backing field. Properties
   and methods are \texttt{PascalCase}, while the local variable \texttt{c}
   stays \texttt{camelCase}.}
@@ -159,6 +164,7 @@ public int Count
   }
 }
   \end{lstlisting}
+
   \hint{\texttt{value} is the implicit parameter of the setter. Since call sites
   never change, you can start with an auto-implemented property and add
   validation later -- which is why C\# exposes properties where Java exposes
@@ -198,6 +204,8 @@ public bool IsEmpty
   A property fits when the value is cheap to compute, free of side effects and
   reads like state. Prefer a method when the call does real work, may fail or
   needs parameters.
+  \vspace{3ex}
+
   \hint{Omitting \texttt{set} makes the property read-only. Callers cannot
   tell \texttt{IsEmpty} from a field.}
 \end{solutionframe}
