@@ -74,6 +74,65 @@
   \end{beamerboxesrounded}%
 }
 
+%%% Exercise and solution slides
+%%%
+%%% These are set apart from the explanatory slides by a tinted background, a
+%%% colored frame title with an icon, and matching bullets.
+%%%
+%%% Usage:
+%%%   \begin{exerciseframe}{Short Title} ... \end{exerciseframe}
+%%%   \begin{solutionframe}{Short Title} ... \end{solutionframe}
+%%%
+%%% Both may contain listings; they are already fragile. Exercises are numbered
+%%% automatically. A solution repeats the number of the most recent exercise,
+%%% hence it has to follow the exercise it belongs to.
+
+\definecolor{exercisebg}{RGB}{233,242,252} % very light blue
+\definecolor{exercisefg}{RGB}{13,71,161}   % dark blue
+\definecolor{solutionbg}{RGB}{233,246,235} % very light green
+\definecolor{solutionfg}{RGB}{27,94,32}    % dark green
+
+\newcounter{exercise}
+\newcommand{\exerciselabel}{\faIcon{pencil-alt}\ Exercise \theexercise}
+\newcommand{\solutionlabel}{\faCheckCircle\ Solution \theexercise}
+
+\newcommand{\exercisestyle}{%
+  \setbeamercolor{background canvas}{bg=exercisebg}%
+  \setbeamercolor{frametitle}{fg=exercisefg}%
+}
+\newcommand{\solutionstyle}{%
+  \setbeamercolor{background canvas}{bg=solutionbg}%
+  \setbeamercolor{frametitle}{fg=solutionfg}%
+}
+%%% Restores the look of the explanatory slides. An empty fg lets the frame
+%%% title inherit its color again, as it does by default.
+\newcommand{\explanationstyle}{%
+  \setbeamercolor{background canvas}{bg=white}%
+  \setbeamercolor{frametitle}{fg=}%
+}
+
+%%% The background canvas is drawn when the frame is shipped out, that is, after
+%%% the frame has ended. The style therefore cannot be confined to a group
+%%% around the frame; it is switched on before the frame and off after it.
+%%% The environment=... option tells the fragile machinery which \end{...}
+%%% terminates the frame.
+\newenvironment{exerciseframe}[1]{%
+  \stepcounter{exercise}%
+  \exercisestyle%
+  \begin{frame}[fragile,environment=exerciseframe]{\exerciselabel: #1}%
+}{%
+  \end{frame}%
+  \explanationstyle%
+}
+
+\newenvironment{solutionframe}[1]{%
+  \solutionstyle%
+  \begin{frame}[fragile,environment=solutionframe]{\solutionlabel: #1}%
+}{%
+  \end{frame}%
+  \explanationstyle%
+}
+
 \begin{document}
 
 \title{C\# Programming for Unity}

@@ -68,6 +68,140 @@ public int Score { get; set; }
   but behave like methods.
 \end{frame}
 
+\begin{exerciseframe}{Port a Java Bean}
+  Rewrite this class in C\#, following the C\# naming conventions and
+  replacing the getter/setter pair by a property. Adapt the caller as well.
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+      \textbf{Counter.java}
+      \begin{lstlisting}[language=Java,basicstyle=\scriptsize\ttfamily]
+public class Counter {
+  private int count;
+
+  public int getCount() {
+    return count;
+  }
+  public void setCount(int c) {
+    count = c;
+  }
+  public void increment() {
+    count++;
+  }
+}
+      \end{lstlisting}
+    \column{0.48\textwidth}
+      \textbf{Caller}
+      \begin{lstlisting}[language=Java,basicstyle=\scriptsize\ttfamily]
+Counter c = new Counter();
+c.setCount(5);
+c.increment();
+System.out.println(c.getCount());
+      \end{lstlisting}
+  \end{columns}
+\end{exerciseframe}
+
+\begin{solutionframe}{Port a Java Bean}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+      \textbf{Counter.cs}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public class Counter
+{
+  public int Count { get; set; }
+
+  public void Increment()
+  {
+    Count++;
+  }
+}
+      \end{lstlisting}
+    \column{0.48\textwidth}
+      \textbf{Caller}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Counter c = new Counter();
+c.Count = 5;
+c.Increment();
+Console.WriteLine(c.Count);
+      \end{lstlisting}
+  \end{columns}
+  \hint{The auto-implemented property provides the backing field. Properties
+  and methods are \texttt{PascalCase}, while the local variable \texttt{c}
+  stays \texttt{camelCase}.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Validation Without Breaking Callers}
+  \texttt{Count} shall reject negative values by throwing an
+  \texttt{ArgumentOutOfRangeException}. Change \texttt{Counter} only -- this
+  call site must keep compiling unchanged.
+  \begin{lstlisting}
+Counter c = new Counter();
+c.Count = 5;    // still fine
+c.Count = -1;   // must throw
+  \end{lstlisting}
+  Which change would a Java program with \texttt{getCount}/\texttt{setCount}
+  have required here?
+\end{exerciseframe}
+
+\begin{solutionframe}{Validation Without Breaking Callers}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private int count;
+
+public int Count
+{
+  get => count;
+  set
+  {
+    if (value < 0)
+    {
+      throw new ArgumentOutOfRangeException(nameof(value));
+    }
+    count = value;
+  }
+}
+  \end{lstlisting}
+  \hint{\texttt{value} is the implicit parameter of the setter. Since call sites
+  never change, you can start with an auto-implemented property and add
+  validation later -- which is why C\# exposes properties where Java exposes
+  getters and setters.}
+\end{solutionframe}
+
+\begin{exerciseframe}{A Computed Property}
+  Add a read-only \texttt{IsEmpty} to \texttt{Counter} that yields
+  \texttt{true} exactly when \texttt{Count} is zero, without storing any
+  additional state.
+  \begin{lstlisting}
+Counter c = new Counter();
+Console.WriteLine(c.IsEmpty);   // True
+c.Count = 3;
+Console.WriteLine(c.IsEmpty);   // False
+  \end{lstlisting}
+  When would you prefer a method \texttt{bool IsEmpty()} over a property?
+\end{exerciseframe}
+
+\begin{solutionframe}{A Computed Property}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \textbf{Expression-bodied}
+      \begin{lstlisting}
+public bool IsEmpty
+  => Count == 0;
+      \end{lstlisting}
+    \column{0.5\textwidth}
+      \textbf{Equivalent long form}
+      \begin{lstlisting}
+public bool IsEmpty
+{
+  get { return Count == 0; }
+}
+      \end{lstlisting}
+  \end{columns}
+  A property fits when the value is cheap to compute, free of side effects and
+  reads like state. Prefer a method when the call does real work, may fail or
+  needs parameters.
+  \hint{Omitting \texttt{set} makes the property read-only. Callers cannot
+  tell \texttt{IsEmpty} from a field.}
+\end{solutionframe}
+
 \begin{frame}{Value Types vs.\ Reference Types}
   \begin{itemize}
     \item Java: primitives (\texttt{int}, \texttt{double}, \texttt{boolean},
