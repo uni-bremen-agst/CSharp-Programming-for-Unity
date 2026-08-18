@@ -9,30 +9,30 @@
 
 \begin{frame}{Java vs.\ C\#: Big Picture}
   \begin{itemize}
-  \item Both are class-based, object-oriented, statically typed languages
-    with a similar-looking syntax (curly braces, semicolons, single
-    inheritance of classes, interfaces).
-  \item Both compile to an intermediate bytecode that runs on a virtual
-    machine with a JIT compiler and garbage collection.
-    \begin{itemize}
-    \item Java: source $\to$ \texttt{.class} bytecode $\to$ JVM
-    \item C\#: source $\to$ intermediate language (\texttt{.dll}/\texttt{.exe})
-      $\to$ CLR (in Unity: Mono or IL2CPP)
-    \end{itemize}
-  \item Despite the similarity, several design decisions differ --
-    this section highlights the ones you will notice first.
+    \item Both are class-based, object-oriented, statically typed languages
+      with a similar-looking syntax (curly braces, semicolons, single
+      inheritance of classes, interfaces).
+    \item Both compile to an intermediate bytecode that runs on a virtual
+      machine with a JIT compiler and garbage collection.
+      \begin{itemize}
+        \item Java: source $\to$ \texttt{.class} bytecode $\to$ JVM
+        \item C\#: source $\to$ intermediate language (\texttt{.dll}/\texttt{.exe})
+          $\to$ CLR (in Unity: Mono or IL2CPP)
+      \end{itemize}
+    \item Despite the similarity, several design decisions differ --
+      this section highlights the ones you will notice first.
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Naming Conventions}
   \begin{itemize}
-  \item Java: \texttt{camelCase} for methods and fields,
-    \texttt{PascalCase} for classes.
-  \item C\#: \texttt{PascalCase} for classes, methods, \emph{and}
-    properties; \texttt{camelCase} for local variables and parameters.
-  \item Consequence: a method that reads a value is
-    \texttt{getScore()} in Java, but simply \texttt{Score} (a property,
-    see below) or \texttt{GetScore()} in C\#.
+    \item Java: \texttt{camelCase} for methods and fields,
+      \texttt{PascalCase} for classes.
+    \item C\#: \texttt{PascalCase} for classes, methods, \emph{and}
+      properties; \texttt{camelCase} for local variables and parameters.
+    \item Consequence: a method that reads a value is
+      \texttt{getScore()} in Java, but simply \texttt{Score} (a property,
+      see below) or \texttt{GetScore()} in C\#.
   \end{itemize}
 \end{frame}
 
@@ -70,53 +70,53 @@ public int Score { get; set; }
 
 \begin{frame}{Value Types vs.\ Reference Types}
   \begin{itemize}
-  \item Java: primitives (\texttt{int}, \texttt{double}, \texttt{boolean},
-    \ldots) are value types; \emph{everything else} is a reference type
-    and lives on the heap.
-  \item C\#: you can define your own value types with \texttt{struct}
-    (copied by value, usually on the stack) in addition to
-    \texttt{class} (reference type, on the heap).
-  \item Relevant for Unity: \texttt{Vector3}, \texttt{Quaternion},
-    \texttt{Color} are \texttt{struct}s -- assigning or passing them
-    copies the whole value. A common bug when coming from Java is
-    expecting mutations to a struct field of another object to
-    "stick".
+    \item Java: primitives (\texttt{int}, \texttt{double}, \texttt{boolean},
+      \ldots) are value types; \emph{everything else} is a reference type
+      and lives on the heap.
+    \item C\#: you can define your own value types with \texttt{struct}
+      (copied by value, usually on the stack) in addition to
+      \texttt{class} (reference type, on the heap).
+    \item Relevant for Unity: \texttt{Vector3}, \texttt{Quaternion},
+      \texttt{Color} are \texttt{struct}s -- assigning or passing them
+      copies the whole value. A common bug when coming from Java is
+      expecting mutations to a struct field of another object to
+      "stick".
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Nullability}
   \begin{itemize}
-  \item Java: any reference may be \texttt{null}; primitives cannot be
-    \texttt{null}.
-  \item C\#: reference types may be \texttt{null} just like in Java;
-    value types are \emph{not} nullable unless explicitly wrapped,
-    e.g.\ \texttt{int?\ x = null;} (short for \texttt{Nullable<int>}).
-  \item Convenience operators without a Java equivalent:
-    \begin{itemize}
-    \item \texttt{a?.Foo()} -- null-conditional call, evaluates to
-      \texttt{null} instead of throwing if \texttt{a} is \texttt{null}.
-    \item \texttt{a ?? b} -- null-coalescing, yields \texttt{b} if
-      \texttt{a} is \texttt{null}.
-    \end{itemize}
+    \item Java: any reference may be \texttt{null}; primitives cannot be
+      \texttt{null}.
+    \item C\#: reference types may be \texttt{null} just like in Java;
+      value types are \emph{not} nullable unless explicitly wrapped,
+      e.g.\ \texttt{int?\ x = null;} (short for \texttt{Nullable<int>}).
+    \item Convenience operators without a Java equivalent:
+      \begin{itemize}
+        \item \texttt{a?.Foo()} -- null-conditional call, evaluates to
+          \texttt{null} instead of throwing if \texttt{a} is \texttt{null}.
+        \item \texttt{a ?? b} -- null-coalescing, yields \texttt{b} if
+          \texttt{a} is \texttt{null}.
+      \end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Namespaces and Packages}
   \begin{itemize}
-  \item Java: package name must match the directory structure; one
-    public top-level class per file; \texttt{import} for other packages.
-  \item C\#: \texttt{namespace} is independent of the folder layout;
-    a file may contain several classes and even several namespaces;
-    \texttt{using} instead of \texttt{import}.
+    \item Java: package name must match the directory structure; one
+      public top-level class per file; \texttt{import} for other packages.
+    \item C\#: \texttt{namespace} is independent of the folder layout;
+      a file may contain several classes and even several namespaces;
+      \texttt{using} instead of \texttt{import}.
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Partial Classes: One Type, Multiple Files}
   \begin{itemize}
-  \item Java: a (non-nested) class must be fully defined in a single file.
-  \item C\#: the \texttt{partial} keyword lets you split the definition
-    of one class, struct, or interface across several files -- the
-    compiler merges all parts into a single type.
+    \item Java: a (non-nested) class must be fully defined in a single file.
+    \item C\#: the \texttt{partial} keyword lets you split the definition
+      of one class, struct, or interface across several files -- the
+      compiler merges all parts into a single type.
   \end{itemize}
   \begin{columns}[T]
     \column{0.5\textwidth}
@@ -150,29 +150,29 @@ public partial class Player
 
 \begin{frame}{Access Modifiers}
   \begin{itemize}
-  \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
-    and \emph{package-private} (the default -- no keyword).
-  \item C\#: \texttt{public}, \texttt{protected}, \texttt{private},
-    \texttt{internal} (visible within the whole assembly, not just a
-    folder/package), plus combinations
-    \texttt{protected internal} and \texttt{private protected}.
-  \item C\# has no direct equivalent of Java's package-private; the
-    default access (with no modifier) is \texttt{private} for members
-    and \texttt{internal} for top-level types.
+    \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
+      and \emph{package-private} (the default -- no keyword).
+    \item C\#: \texttt{public}, \texttt{protected}, \texttt{private},
+      \texttt{internal} (visible within the whole assembly, not just a
+      folder/package), plus combinations
+      \texttt{protected internal} and \texttt{private protected}.
+    \item C\# has no direct equivalent of Java's package-private; the
+      default access (with no modifier) is \texttt{private} for members
+      and \texttt{internal} for top-level types.
   \end{itemize}
 \end{frame}
 
 \begin{frame}{Delegates, Lambdas, and Events}
   \begin{itemize}
-  \item Java: callbacks are modeled with functional interfaces
-    (\texttt{Runnable}, \texttt{Comparator<T>}, \texttt{@FunctionalInterface})
-    plus lambda expressions.
-  \item C\#: \texttt{delegate} is a built-in, type-safe function-pointer
-    type; \texttt{Action}/\texttt{Func<...>} are predefined generic
-    delegates so you rarely declare your own.
-  \item The \texttt{event} keyword builds the observer pattern into the
-    language (subscribe with \texttt{+=}, unsubscribe with \texttt{-=}) --
-    Java has no direct counterpart.
+    \item Java: callbacks are modeled with functional interfaces
+      (\texttt{Runnable}, \texttt{Comparator<T>}, \texttt{@FunctionalInterface})
+      plus lambda expressions.
+    \item C\#: \texttt{delegate} is a built-in, type-safe function-pointer
+      type; \texttt{Action}/\texttt{Func<...>} are predefined generic
+      delegates so you rarely declare your own.
+    \item The \texttt{event} keyword builds the observer pattern into the
+      language (subscribe with \texttt{+=}, unsubscribe with \texttt{-=}) --
+      Java has no direct counterpart.
   \end{itemize}
 \end{frame}
 
@@ -198,12 +198,12 @@ a.Fire();
 
 \begin{frame}[fragile]{Action and Func}
   \begin{itemize}
-  \item \texttt{Action<T1,...>} is a predefined generic delegate for
-    a method returning \texttt{void}.
-  \item \texttt{Func<T1,...,TResult>} is a predefined generic delegate
-    for a method returning \texttt{TResult} (the last type parameter).
-  \item Both come from the framework -- no need to declare your own
-    \texttt{delegate} type for common cases.
+    \item \texttt{Action<T1,...>} is a predefined generic delegate for
+      a method returning \texttt{void}.
+    \item \texttt{Func<T1,...,TResult>} is a predefined generic delegate
+      for a method returning \texttt{TResult} (the last type parameter).
+    \item Both come from the framework -- no need to declare your own
+      \texttt{delegate} type for common cases.
   \end{itemize}
   \begin{lstlisting}
 Action<string> print = msg => Console.WriteLine(msg);
@@ -245,10 +245,10 @@ int sum = Reduce(numbers, 0, (a, b) => a + b); // 10
 
 \begin{frame}[fragile]{Operator Overloading}
   \begin{itemize}
-  \item Java: not allowed (the \texttt{+} operator on \texttt{String}
-    is a special case built into the language).
-  \item C\#: user-defined types can overload operators -- used
-    extensively by Unity's math types.
+    \item Java: not allowed (the \texttt{+} operator on \texttt{String}
+      is a special case built into the language).
+    \item C\#: user-defined types can overload operators -- used
+      extensively by Unity's math types.
   \end{itemize}
   \begin{lstlisting}
 public static Vector3 operator +(Vector3 a, Vector3 b)
@@ -266,12 +266,12 @@ public static Vector3 operator +(Vector3 a, Vector3 b)
 
 \begin{frame}{Exceptions}
   \begin{itemize}
-  \item Java distinguishes \emph{checked} exceptions (must be declared
-    with \texttt{throws} or caught) from \emph{unchecked} ones
-    (\texttt{RuntimeException} and subclasses).
-  \item C\# has only unchecked exceptions -- no \texttt{throws}
-    declaration exists, and the compiler never forces you to catch
-    anything.
+    \item Java distinguishes \emph{checked} exceptions (must be declared
+      with \texttt{throws} or caught) from \emph{unchecked} ones
+      (\texttt{RuntimeException} and subclasses).
+    \item C\# has only unchecked exceptions -- no \texttt{throws}
+      declaration exists, and the compiler never forces you to catch
+      anything.
   \end{itemize}
 \end{frame}
 
@@ -298,18 +298,18 @@ names
 
 \begin{frame}[fragile]{Small Syntax Differences}
   \begin{itemize}
-  \item String interpolation: \texttt{\$"Hello, \{name\}!"} in C\#
-    vs.\ \texttt{"Hello, " + name + "!"} or \texttt{String.format(...)}
-    in Java.
-  \item Both languages have \texttt{var} for local type inference; C\#
-    additionally allows target-typed \texttt{new()}, e.g.\
-    \texttt{List<int> xs = new();}
-  \item C\# supports \emph{extension methods} -- adding a method to an
-    existing type without subclassing or modifying it. Java has no
-    equivalent (default interface methods come closest but require an
-    interface).
-  \item Generics: C\# generics are reified (the type is known at run
-    time); Java generics use type erasure.
+    \item String interpolation: \texttt{\$"Hello, \{name\}!"} in C\#
+      vs.\ \texttt{"Hello, " + name + "!"} or \texttt{String.format(...)}
+      in Java.
+    \item Both languages have \texttt{var} for local type inference; C\#
+      additionally allows target-typed \texttt{new()}, e.g.\
+      \texttt{List<int> xs = new();}
+    \item C\# supports \emph{extension methods} -- adding a method to an
+      existing type without subclassing or modifying it. Java has no
+      equivalent (default interface methods come closest but require an
+      interface).
+    \item Generics: C\# generics are reified (the type is known at run
+      time); Java generics use type erasure.
   \end{itemize}
   \vfill
   
@@ -319,15 +319,15 @@ names
 
 \begin{frame}{Takeaways for Unity}
   \begin{itemize}
-  \item \texttt{MonoBehaviour} callbacks (\texttt{Start}, \texttt{Update},
-    \ldots) are ordinary C\# methods matched by name and signature --
-    no \texttt{@Override} annotation, so a typo silently creates an
-    unused method instead of a compiler error.
-  \item Math and value types (\texttt{Vector3}, \texttt{Quaternion},
-    \texttt{Color}, \texttt{struct}s in general) are copied by value --
-    watch out for the Java habit of expecting shared, mutable state.
-  \item Coroutines (\texttt{IEnumerator} + \texttt{yield return}) provide
-    cooperative multitasking with no direct Java counterpart.
+    \item \texttt{MonoBehaviour} callbacks (\texttt{Start}, \texttt{Update},
+      \ldots) are ordinary C\# methods matched by name and signature --
+      no \texttt{@Override} annotation, so a typo silently creates an
+      unused method instead of a compiler error.
+    \item Math and value types (\texttt{Vector3}, \texttt{Quaternion},
+      \texttt{Color}, \texttt{struct}s in general) are copied by value --
+      watch out for the Java habit of expecting shared, mutable state.
+    \item Coroutines (\texttt{IEnumerator} + \texttt{yield return}) provide
+      cooperative multitasking with no direct Java counterpart.
   \end{itemize}
   \pause
   \vfill
