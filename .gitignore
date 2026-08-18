@@ -5,7 +5,9 @@
 *.nav
 *.out
 *.snm
+*.vrb
 *.synctex.gz
 *.toc
 main-slides.pdf
 main-handout.pdf
+main.pdf
