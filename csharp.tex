@@ -138,14 +138,14 @@ public partial class Player
 }
       \end{lstlisting}
   \end{columns}
-  
+
   Every part needs the \texttt{partial} keyword, lives in the
   same namespace and assembly, and must agree on access modifier
   and base class/interfaces.
-  
+
   \hint{Can be used to split large classes into more cohesive parts.
   However, it is generally better to avoid larges classes altogether.}
-  
+
 \end{frame}
 
 \begin{frame}{Access Modifiers}
@@ -256,12 +256,12 @@ public static Vector3 operator +(Vector3 a, Vector3 b)
   \end{lstlisting}
   \pause
   \vfill
-  
+
   \hint{The \texttt{==} operator for \texttt{GameObject} is overloaded.
-  When you evaluate myGameObject == null, Unity isn't just checking if the C\# reference 
-  is empty. It is checking if the underlying native C++ engine object has been 
+  When you evaluate myGameObject == null, Unity isn't just checking if the C\# reference
+  is empty. It is checking if the underlying native C++ engine object has been
   destroyed. The C++ object is destroyed only at the end of the frame.}
-  
+
 \end{frame}
 
 \begin{frame}{Exceptions}
@@ -312,9 +312,9 @@ names
       time); Java generics use type erasure.
   \end{itemize}
   \vfill
-  
+
   \hint{Do not use \texttt{var}. You would suppress important type information.}
-  
+
 \end{frame}
 
 \begin{frame}{Takeaways for Unity}
@@ -331,7 +331,7 @@ names
   \end{itemize}
   \pause
   \vfill
-  
+
   \hint{A \texttt{struct} assignment always copies -- if you mutate a
     struct returned by a property or method, you are mutating a
     temporary copy, not the original.}
