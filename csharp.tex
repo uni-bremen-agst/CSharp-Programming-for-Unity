@@ -1232,6 +1232,78 @@ public static class StringExtensions
   equivalent.}
 \end{solutionframe}
 
+\begin{frame}{Extension Methods: Resolution}
+  Given both \texttt{Describe(this Base)} and \texttt{Describe(this Derived)}
+  where \texttt{Derived} inherits from \texttt{Base},
+  the \emph{static} type of the receiver decides. There is no virtual dispatch.
+  \vspace{1ex}
+
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{ll}
+      \hline
+      \textbf{Expression} & \textbf{Method selected}\\
+      \hline
+      \texttt{Base b = new Derived(); b.Describe()} & extension on \texttt{Base}\\
+      \texttt{new Derived().Describe()}             & extension on \texttt{Derived}\\
+      \texttt{((Derived)b).Describe()}              & extension on \texttt{Derived}\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item An instance method of matching signature always wins, an inherited one
+      as well. Adding a method to a base class can hence silently take calls
+      away from an extension method.
+    \item An extension method in a nearer namespace shadows one further out,
+      which is as close as C\# gets to overriding an extension method.
+    \item Two applicable extension methods at the same distance are ambiguous
+      (\texttt{CS0121}).
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Which Method Runs?}
+  Both extension methods are in scope. Predict the three outputs before you run
+  the program.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+class Base { }
+class Derived : Base { }
+
+static class BaseExtensions
+{
+  public static string Describe(this Base b) => "Base";
+  public static string Describe(this Derived d) => "Derived";
+}
+
+Base b = new Derived();
+Console.WriteLine(b.Describe());
+Console.WriteLine(new Derived().Describe());
+Console.WriteLine(((Derived)b).Describe());
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Which Method Runs?}
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+Base
+Derived
+Derived
+  \end{lstlisting}
+  \begin{itemize}
+    \item The first line is the surprising one: the object is a
+      \texttt{Derived}, yet the extension of \texttt{Base} runs, because
+      \texttt{b} is \emph{declared} as \texttt{Base}.
+    \item The cast in the third line changes the outcome, which would never
+      happen with a virtual instance method.
+  \end{itemize}
+  \vspace{4ex}
+
+  \hint{Resolution takes place at compile time on the static type. Extension
+  methods are therefore a poor fit wherever polymorphic behaviour is wanted.}
+\end{solutionframe}
+
 \begin{frame}{Takeaways for Unity}
   \begin{itemize}
     \item \texttt{MonoBehaviour} callbacks (\texttt{Start}, \texttt{Update},
