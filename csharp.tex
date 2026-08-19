@@ -510,6 +510,43 @@ public partial class Player
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Access Modifiers: The Two Combinations}
+  \begin{itemize}
+    \item \texttt{protected internal} means protected \emph{or} internal and is
+      therefore \emph{wider} than either part alone: the whole assembly plus
+      derived classes everywhere.
+    \item \texttt{private protected} means protected \emph{and} internal and is
+      therefore \emph{narrower} than either part alone: only derived classes
+      within the same assembly.
+  \end{itemize}
+  \vspace{1ex}
+
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{lcccc}
+      \hline
+      \textbf{Modifier}
+        & \shortstack{unrelated class,\\same assembly}
+        & \shortstack{derived class,\\same assembly}
+        & \shortstack{derived class,\\other assembly}
+        & \shortstack{anywhere\\else}\\
+      \hline
+      \texttt{internal}           & yes & yes & no  & no\\
+      \texttt{protected}          & no  & yes & yes & no\\
+      \texttt{protected internal} & yes & yes & yes & no\\
+      \texttt{private protected}  & no  & yes & no  & no\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{1ex}
+
+  \hint{The unit of accessibility is the assembly, in Unity determined by the
+  \texttt{.asmdef} files. Without any, all scripts end up in
+  \texttt{Assembly-CSharp}, where \texttt{internal} is effectively
+  \texttt{public} and \texttt{private protected} collapses to
+  \texttt{protected}.}
+\end{frame}
+
 \begin{exerciseframe}{One File, Two Namespaces}
   Put both classes into a \emph{single} file whose name matches neither of them,
   in two different namespaces, and let \texttt{NodeView} use \texttt{Node}.
