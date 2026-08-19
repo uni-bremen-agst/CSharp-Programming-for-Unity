@@ -960,10 +960,12 @@ public static Vector3 operator +(Vector3 a, Vector3 b)
   \pause
   \vfill
 
-  \hint{The \texttt{==} operator for \texttt{GameObject} is overloaded.
-  When you evaluate myGameObject == null, Unity isn't just checking if the C\# reference
+  \hint{The \texttt{==} operator for \texttt{GameObject} in Unity is overloaded.
+  When you evaluate\\
+  myGameObject == null, Unity isn't just checking if the C\# reference
   is empty. It is checking if the underlying native C++ engine object has been
-  destroyed. The C++ object is destroyed only at the end of the frame.}
+  destroyed.\\
+  The C++ object is destroyed only at the end of the frame.}
 
 \end{frame}
 
@@ -1008,6 +1010,7 @@ public static bool operator !=(Money a, Money b)
     \item Two warnings remain: \texttt{CS0660} and \texttt{CS0661} ask you to
       override \texttt{Equals} and \texttt{GetHashCode} as well.
   \end{itemize}
+  \vspace{3ex}
 
   \hint{Collections and LINQ compare with \texttt{Equals}, not with
   \texttt{==}, hence a type whose two notions of equality disagree behaves
@@ -1059,7 +1062,7 @@ try {
     \item Only documentation remains: possible exceptions are recorded in XML
       documentation comments, which the IDE shows at the call site.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{3ex}
 
   \hint{\texttt{try}, \texttt{catch} and \texttt{finally} work as in Java. What
   is missing is the compiler forcing you to handle anything, which moves the
@@ -1089,8 +1092,8 @@ names
 \end{frame}
 
 \begin{exerciseframe}{When Does a LINQ Query Run?}
-  Port the pipeline of \slideref{slide:linq} to LINQ. Then predict the two
-  numbers.
+  The pipeline of \slideref{slide:linq} looked like a single computation.
+  Predict the two numbers returned by \texttt{Count()} here.
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
