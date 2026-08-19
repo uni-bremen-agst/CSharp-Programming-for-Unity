@@ -1116,10 +1116,10 @@ Console.WriteLine(query.Count());
     \item It may be enumerated as often as you like. A Java stream may be
       consumed once only, a second terminal operation throws an
       \texttt{IllegalStateException}.
-    \item \texttt{ToList()} or \texttt{ToArray()} runs the query once and
-      freezes the outcome.
+    \item Both \texttt{ToList()} and \texttt{ToArray()} run the query once and
+      freeze the outcome.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{5ex}
 
   \hint{Deferred execution is what lets a query read like a description rather
   than a computation. Beware of sources changing in between, and of enumerating
