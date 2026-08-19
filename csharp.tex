@@ -518,6 +518,30 @@ public partial class Player
 
 \end{frame}
 
+\begin{frame}{Type Names and File Names}
+  \begin{itemize}
+    \item Java: a public top-level class has to reside in a file of the very
+      same name, and the compiler enforces that.
+    \item C\#: no such rule. A file may contain any number of types, public or
+      not, and its name need not relate to any of them. Conversely,
+      \texttt{partial} lets a single type span several files.
+    \item The convention is nevertheless one top-level type per file, named
+      after that type, and \texttt{Type.Aspect.cs} for the parts of a partial
+      type, as with \texttt{Player.Combat.cs} before. Type parameters are
+      dropped: \texttt{Graph<T>} lives in \texttt{Graph.cs}.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Unity turns that convention into a rule for \texttt{MonoBehaviour}
+      and \texttt{ScriptableObject}: unless the file is named after the class,
+      the script cannot be attached as a component.}
+  \vspace{1ex}
+
+  \hint{Let type and file name match even where the compiler does not care.
+  Readers, IDE navigation, reviews and diffs all rely on finding \texttt{Foo}
+  in \texttt{Foo.cs}.}
+\end{frame}
+
 \begin{frame}{Access Modifiers}
   \begin{itemize}
     \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
