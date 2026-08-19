@@ -800,9 +800,10 @@ int sum = Reduce(numbers, 0, (a, b) => a + b); // 10
 
 \begin{exerciseframe}{Events Are Not Fields}
   Take \texttt{Alarm} from \slideref{slide:alarm}. Subscribe two handlers,
-  unsubscribe one of
-  them, fire, and predict the output. Then try these two statements from
-  \emph{outside} \texttt{Alarm} and read the error.
+  unsubscribe one of them, fire, and predict the output.
+  \vspace{1ex}
+
+  Then try these statements from \emph{outside} \texttt{Alarm} and read the error:
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -820,13 +821,13 @@ a.Triggered.Invoke("x");
   \begin{itemize}
     \item Only the handler still subscribed runs, as \texttt{-=} removes
       exactly the one handler passed to it.
-    \item Both statements are rejected: \texttt{CS0070: The event
-      'Alarm.Triggered' can only appear on the left hand side of += or -=
+    \item Both statements referring to \texttt{Triggered} are rejected:\\
+     \texttt{CS0070: The event 'Alarm.Triggered' can only appear on the left hand side of += or -=
       (except when used from within the type 'Alarm').}
     \item With a plain delegate field both compile -- any caller could then
       discard all subscribers or raise the alarm itself.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{3ex}
 
   \hint{That is what \texttt{event} buys you: outside the declaring type only
   \texttt{+=} and \texttt{-=} are permitted. Inside, \texttt{Triggered} is
@@ -835,11 +836,13 @@ a.Triggered.Invoke("x");
 \end{solutionframe}
 
 \begin{exerciseframe}{One Method Instead of Two}
-  \texttt{SumOfOdds} differs from \texttt{SumOfEvens} in the comparison only.
-  Replace both by a single method that receives the criterion as a parameter.
-  \vspace{1ex}
 
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+  Given the following two methods, which differ in their comparison only:
+  \vspace{0.5ex}
+
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 static int SumOfEvens(List<int> items)
 {
   int result = 0;
@@ -852,7 +855,26 @@ static int SumOfEvens(List<int> items)
   }
   return result;
 }
-  \end{lstlisting}
+      \end{lstlisting}
+    \column{0.5\textwidth}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static int SumOfOdds(List<int> items)
+{
+  int result = 0;
+  foreach (int item in items)
+  {
+    if (item % 2 != 0)
+    {
+      result += item;
+    }
+  }
+  return result;
+}
+      \end{lstlisting}
+  \end{columns}
+
+  Replace both by a single method that receives the criterion as a parameter.
+
 \end{exerciseframe}
 
 \begin{solutionframe}{One Method Instead of Two}
@@ -873,6 +895,8 @@ static int Sum(List<int> items, Func<int, bool> keep)
 int evens = Sum(numbers, n => n % 2 == 0);   // 6
 int odds = Sum(numbers, n => n % 2 != 0);    // 4
   \end{lstlisting}
+  \vspace{2ex}
+
   \hint{Passing behaviour instead of duplicating loops is the very shape behind
   LINQ's \texttt{Where}.}
 \end{solutionframe}
@@ -880,12 +904,16 @@ int odds = Sum(numbers, n => n % 2 != 0);    // 4
 \begin{exerciseframe}{Behaviour as a Parameter}
   Implement \texttt{Retry} so that it calls \texttt{attempt} at most
   \texttt{times} times and yields \texttt{true} as soon as one call succeeds.
-  What do the two statements print?
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-static bool Retry(int times, Func<bool> attempt)
+static bool Retry(int times, Func<bool> attempt) { ... }
+  \end{lstlisting}
 
+  What do the following statements print?
+  \vspace{1ex}
+
+\begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 int calls = 0;
 Func<bool> succeedsOnThird = () => ++calls == 3;
 
@@ -911,13 +939,14 @@ static bool Retry(int times, Func<bool> attempt)
   \end{lstlisting}
   The statements print \texttt{True} and \texttt{False}: three attempts are
   granted in the first case, only two in the second.
-  \vspace{1ex}
+  \vspace{3ex}
 
   \hint{\texttt{Func<bool>} takes no arguments and returns a \texttt{bool}. Were
   there nothing to return, \texttt{Action} would be the counterpart.}
 \end{solutionframe}
 
 \begin{frame}[fragile]{Operator Overloading}
+  \framelabel{slide:operators}
   \begin{itemize}
     \item Java: not allowed (the \texttt{+} operator on \texttt{String}
       is a special case built into the language).
@@ -938,6 +967,54 @@ public static Vector3 operator +(Vector3 a, Vector3 b)
 
 \end{frame}
 
+\begin{exerciseframe}{Operators on a Money Struct}
+  Give \texttt{Money} an \texttt{operator +} adding two amounts and an
+  \texttt{operator ==} letting equal amounts compare equal. Compile after each
+  of the two steps and read what the compiler says about \texttt{==}.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+struct Money
+{
+  public int Cents;
+
+  public Money(int cents)
+  {
+    Cents = cents;
+  }
+}
+
+Money a = new Money(150);
+Money b = new Money(99);
+Console.WriteLine((a + b).Cents);        // 249
+Console.WriteLine(a == new Money(150));  // True
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Operators on a Money Struct}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public static Money operator +(Money a, Money b)
+  => new Money(a.Cents + b.Cents);
+
+public static bool operator ==(Money a, Money b)
+  => a.Cents == b.Cents;
+
+public static bool operator !=(Money a, Money b)
+  => !(a == b);
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{==} alone does not compile: \texttt{CS0216} demands a matching
+      \texttt{!=}.
+    \item Two warnings remain: \texttt{CS0660} and \texttt{CS0661} ask you to
+      override \texttt{Equals} and \texttt{GetHashCode} as well.
+  \end{itemize}
+
+  \hint{Collections and LINQ compare with \texttt{Equals}, not with
+  \texttt{==}, hence a type whose two notions of equality disagree behaves
+  inconsistently. Unity's \texttt{GameObject} shows the other side of
+  overloading \texttt{==}, see \slideref{slide:operators}.}
+\end{solutionframe}
+
 \begin{frame}{Exceptions}
   \begin{itemize}
     \item Java distinguishes \emph{checked} exceptions (must be declared
@@ -949,7 +1026,48 @@ public static Vector3 operator +(Vector3 a, Vector3 b)
   \end{itemize}
 \end{frame}
 
+\begin{exerciseframe}{A Signature Without throws}
+  Port this method to C\#. What becomes of the \texttt{throws} clause, and what
+  happens if the caller leaves out the \texttt{try}?
+  \vspace{1ex}
+
+  \begin{lstlisting}[language=Java,basicstyle=\scriptsize\ttfamily]
+static String readFirstLine(String path)
+    throws IOException
+{
+  ...
+}
+
+try {
+  System.out.println(readFirstLine("in.txt"));
+} catch (IOException e) {
+  System.out.println("cannot read");
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  How does a caller of the C\# version learn that reading may fail?
+\end{exerciseframe}
+
+\begin{solutionframe}{A Signature Without throws}
+  \begin{itemize}
+    \item The clause simply disappears, as no \texttt{throws} exists in C\#:
+      \texttt{static string ReadFirstLine(string path)}.
+    \item Leaving out the \texttt{try} still compiles. Nothing reminds the
+      caller, the exception propagates and terminates the program. Unity logs it
+      and aborts the current callback.
+    \item Only documentation remains: possible exceptions are recorded in XML
+      documentation comments, which the IDE shows at the call site.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{\texttt{try}, \texttt{catch} and \texttt{finally} work as in Java. What
+  is missing is the compiler forcing you to handle anything, which moves the
+  burden to documentation and reviews.}
+\end{solutionframe}
+
 \begin{frame}[fragile]{Collections: Streams vs.\ LINQ}
+  \framelabel{slide:linq}
   \begin{columns}[T]
     \column{0.5\textwidth}
       \textbf{Java Streams}
@@ -969,6 +1087,41 @@ names
       \end{lstlisting}
   \end{columns}
 \end{frame}
+
+\begin{exerciseframe}{When Does a LINQ Query Run?}
+  Port the pipeline of \slideref{slide:linq} to LINQ. Then predict the two
+  numbers.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<string> names = new List<string> { "Ann", "Bernard" };
+IEnumerable<string> query = names.Where(n => n.Length > 3);
+names.Add("Christina");
+
+Console.WriteLine(query.Count());
+Console.WriteLine(query.Count());
+  \end{lstlisting}
+  \vspace{1ex}
+
+  What would the second call do in Java, applied to a stream?
+\end{exerciseframe}
+
+\begin{solutionframe}{When Does a LINQ Query Run?}
+  \begin{itemize}
+    \item Both print \texttt{2}. The query runs only when enumerated, hence it
+      sees \texttt{"Christina"}, which was added after the query was built.
+    \item It may be enumerated as often as you like. A Java stream may be
+      consumed once only, a second terminal operation throws an
+      \texttt{IllegalStateException}.
+    \item \texttt{ToList()} or \texttt{ToArray()} runs the query once and
+      freezes the outcome.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Deferred execution is what lets a query read like a description rather
+  than a computation. Beware of sources changing in between, and of enumerating
+  an expensive query more than once.}
+\end{solutionframe}
 
 \begin{frame}[fragile]{Small Syntax Differences}
   \begin{itemize}
@@ -993,6 +1146,47 @@ names
   \hint{Do not use \texttt{var}. You would suppress important type information.}
 
 \end{frame}
+
+\begin{exerciseframe}{An Extension Method}
+  Write \texttt{IsBlank} as an extension method on \texttt{string}, yielding
+  \texttt{true} for the empty string and for a string of blanks. Where does the
+  compiler insist that the method be declared?
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Console.WriteLine("   ".IsBlank());   // True
+Console.WriteLine("x".IsBlank());     // False
+
+string missing = null;
+Console.WriteLine(missing.IsBlank()); // ?
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Predict the last line, then compare it with what a normal instance method
+  would do.
+\end{exerciseframe}
+
+\begin{solutionframe}{An Extension Method}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public static class StringExtensions
+{
+  public static bool IsBlank(this string s)
+    => s == null || s.Trim().Length == 0;
+}
+  \end{lstlisting}
+  \begin{itemize}
+    \item The enclosing class has to be static and non-generic, otherwise
+      \texttt{CS1106} results.
+    \item The last line prints \texttt{True} without throwing: an extension
+      method is a static call, hence \texttt{s} may well be \texttt{null}. A
+      genuine instance method would throw a \texttt{NullReferenceException}.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{That is the essential difference from a real method: the receiver is
+  just the first argument, and there is no dispatch on it. Java has no
+  equivalent.}
+\end{solutionframe}
 
 \begin{frame}{Takeaways for Unity}
   \begin{itemize}
