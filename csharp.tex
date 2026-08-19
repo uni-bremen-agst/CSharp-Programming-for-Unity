@@ -226,6 +226,124 @@ public bool IsEmpty
   \end{itemize}
 \end{frame}
 
+\begin{exerciseframe}{Predict the Output}
+  What does this program print? Write down your answer \emph{before} you run it.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+struct Point { public int X; }
+
+class Holder
+{
+  public Point P = new Point();
+}
+
+Holder h = new Holder();
+Point copy = h.P;
+copy.X = 42;
+Console.WriteLine(h.P.X);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Then replace \texttt{struct Point} by \texttt{class Point} and predict again.
+\end{exerciseframe}
+
+\begin{solutionframe}{Predict the Output}
+  \begin{itemize}
+    \item \texttt{struct Point} prints \texttt{0}:\\
+       \texttt{Point copy = h.P;} copies the value,\\
+       hence \texttt{copy.X = 42;} leaves \texttt{h.P}
+       untouched.
+    \item \texttt{class Point} prints \texttt{42}:\\
+     \texttt{copy} and \texttt{h.P} now refer to the same object.
+  \end{itemize}
+  \vspace{3ex}
+
+  \hint{Java offers only the second case, as every user-defined type is a
+  reference type there. The first case is what makes Unity's \texttt{Vector3},
+  \texttt{Quaternion} and \texttt{Color} behave the way they do.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Why the Compiler Refuses}
+  With \texttt{Point} declared as a \texttt{struct}, this does not compile.\\
+  Read the error message, then make it work in two different ways.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<Point> points = new List<Point> { new Point() };
+points[0].X = 5;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Afterwards replace \texttt{List<Point>} by \texttt{Point[]} and explain why
+  \emph{that} version compiles.
+\end{exerciseframe}
+
+\begin{solutionframe}{Why the Compiler Refuses}
+  The compiler reports the C\# error CS1612.
+  \vspace{1ex}
+
+  The indexer of \texttt{List<T>} is a method returning a \emph{copy} of the
+  element,\\
+  so \texttt{points[0].X = 5;} would modify a temporary that is
+  discarded immediately.\\
+  \vspace{1ex}
+  \pause
+
+  \textbf{First fix:}\\
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Point p = points[0];   // read
+p.X = 5;               // modify
+points[0] = p;         // write back
+  \end{lstlisting}
+  \pause
+
+  \textbf{Second fix:}\\
+  Declaring \texttt{Point} as a class is the other fix: the indexer then hands
+  out a reference and the original assignment compiles.
+  \vspace{3ex}
+  \pause
+
+  \hint{An array behaves differently: \texttt{array[0]} denotes a variable
+  rather than a method call, hence \texttt{array[0].X = 5;} compiles even for a
+  struct.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Mutating a Unity Vector3}
+  A classic Unity compile error. Explain it, then fix it in two ways.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+transform.position.x = 5f;
+  \end{lstlisting}
+  And why does \texttt{transform.position += Vector3.up;} compile?
+\end{exerciseframe}
+
+\begin{solutionframe}{Mutating a Unity Vector3}
+  \texttt{position} is a property returning a \texttt{Vector3}, and
+  \texttt{Vector3} is a \texttt{struct}. Its getter hands out a copy, so the
+  assignment would modify a temporary -- the same error CS1612 as before.
+  \vspace{1ex}
+
+\textbf{First fix:}\\
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Vector3 p = transform.position;
+p.x = 5f;
+transform.position = p;
+  \end{lstlisting}
+
+  \textbf{Second fix:}\\
+ \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+transform.position =
+  new Vector3(5f, transform.position.y, transform.position.z);
+  \end{lstlisting}
+  \vspace{3ex}
+
+  \hint{\texttt{transform.position += Vector3.up;} works because it expands
+  into a read, an addition and an assignment back through the setter --
+  precisely the pattern above.}
+\end{solutionframe}
+
 \begin{frame}{Nullability}
   \begin{itemize}
     \item Java: any reference may be \texttt{null}; primitives cannot be
