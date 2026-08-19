@@ -111,6 +111,31 @@
   \setbeamercolor{frametitle}{fg=}%
 }
 
+%%% Cross references to another slide, by the number its footer shows.
+%%%
+%%% Mark the target with \framelabel{name} inside its frame and refer to it with
+%%% \slideref{name}, which prints the number and links to that slide. \pageref
+%%% is unsuitable here, because the footline shows frame numbers, which differ
+%%% from page numbers as soon as \pause is used.
+%%%
+%%% \framelabel records the frame number, so that \ref yields it, and beamer
+%%% notes the labelled slide in the .snm file, from which it creates a jump
+%%% target of that very name on the next run. \hyperlink uses that target.
+%%% \hyperref[...] would be wrong here: the anchor of a \label inside a frame is
+%%% Doc-Start, so it would jump to the beginning of the document.
+%%%
+%%% \ref* is the starred form yielding the number without a link of its own,
+%%% which would otherwise be nested in the surrounding \hyperlink.
+\makeatletter
+\newcommand{\framelabel}[1]{%
+  \protected@edef\@currentlabel{\insertframenumber}%
+  \label{#1}%
+}
+\makeatother
+\newcommand{\slideref}[1]{%
+  \hyperlink{#1}{\usebeamercolor[fg]{structure}slide~\ref*{#1}}%
+}
+
 %%% The background canvas is drawn when the frame is shipped out, that is, after
 %%% the frame has ended. The style therefore cannot be confined to a group
 %%% around the frame; it is switched on before the frame and off after it.

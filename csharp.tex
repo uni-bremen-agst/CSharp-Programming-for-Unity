@@ -211,6 +211,7 @@ public bool IsEmpty
 \end{solutionframe}
 
 \begin{frame}{Value Types vs.\ Reference Types}
+  \framelabel{slide:valuetypes}
   \begin{itemize}
     \item Java: primitives (\texttt{int}, \texttt{double}, \texttt{boolean},
       \ldots) are value types; \emph{everything else} is a reference type
@@ -325,7 +326,8 @@ transform.position.x = 5f;
 \begin{solutionframe}{Mutating a Unity Vector3}
   \texttt{position} is a property returning a \texttt{Vector3}, and
   \texttt{Vector3} is a \texttt{struct}. Its getter hands out a copy, so the
-  assignment would modify a temporary -- the same error CS1612 as before.
+  assignment would modify a temporary -- the same error CS1612 as on
+  \slideref{slide:valuetypes}.
   \vspace{1ex}
 
 \textbf{First fix:}\\
@@ -482,6 +484,7 @@ int length = person?.Home?.Zip?.Length ?? -1;
 \end{frame}
 
 \begin{frame}[fragile]{Partial Classes: One Type, Multiple Files}
+  \framelabel{slide:partial}
   \begin{itemize}
     \item Java: a (non-nested) class must be fully defined in a single file.
     \item C\#: the \texttt{partial} keyword lets you split the definition
@@ -527,10 +530,10 @@ public partial class Player
       \texttt{partial} lets a single type span several files.
     \item The convention is nevertheless one top-level type per file, named
       after that type, and \texttt{Type.Aspect.cs} for the parts of a partial
-      type, as with \texttt{Player.Combat.cs} before. Type parameters are
+      type, as with \texttt{Player.Combat.cs} on \slideref{slide:partial}. Type
+      parameters are
       dropped: \texttt{Graph<T>} lives in \texttt{Graph.cs}.
   \end{itemize}
-  \vspace{1ex}
 
   \hint{Unity turns that convention into a rule for \texttt{MonoBehaviour}
       and \texttt{ScriptableObject}: unless the file is named after the class,
@@ -543,6 +546,7 @@ public partial class Player
 \end{frame}
 
 \begin{frame}{Access Modifiers}
+  \framelabel{slide:access}
   \begin{itemize}
     \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
       and \emph{package-private} (the default -- no keyword).
@@ -641,7 +645,8 @@ namespace Company.View
 
 \begin{exerciseframe}{Breaking the Partial Rules}
   Split \texttt{Player} across \texttt{Player.cs} and
-  \texttt{Player.Combat.cs} as shown before. Then provoke two compilation errors, one at a
+  \texttt{Player.Combat.cs} as shown on \slideref{slide:partial}. Then provoke
+  two compilation errors, one at a
   time, and predict the message before compiling.
   \vspace{1ex}
 
@@ -671,7 +676,8 @@ namespace Company.View
 \end{solutionframe}
 
 \begin{exerciseframe}{The Default Access Modifier}
-  This does not compile. Explain why, using the rule from the previous slide,
+  This does not compile. Explain why, using the rule from
+  \slideref{slide:access},
   then give two different fixes.
   \vspace{1ex}
 
@@ -725,6 +731,7 @@ CS0050: Inconsistent accessibility: return type
 \end{frame}
 
 \begin{frame}[fragile]{Delegates, Lambdas, and Events: Example}
+  \framelabel{slide:alarm}
   \begin{lstlisting}
 delegate void Notify(string msg);
 
@@ -790,6 +797,125 @@ int sum = Reduce(numbers, 0, (a, b) => a + b); // 10
   \end{lstlisting}
   \hint{Unity APIs do this a lot, e.g.\ \texttt{button.onClick.AddListener(Action)}.}
 \end{frame}
+
+\begin{exerciseframe}{Events Are Not Fields}
+  Take \texttt{Alarm} from \slideref{slide:alarm}. Subscribe two handlers,
+  unsubscribe one of
+  them, fire, and predict the output. Then try these two statements from
+  \emph{outside} \texttt{Alarm} and read the error.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Alarm a = new Alarm();
+a.Triggered = null;
+a.Triggered.Invoke("x");
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Finally replace \texttt{event Notify Triggered} by a plain field
+  \texttt{Notify Triggered}. Which of the two statements compiles now?
+\end{exerciseframe}
+
+\begin{solutionframe}{Events Are Not Fields}
+  \begin{itemize}
+    \item Only the handler still subscribed runs, as \texttt{-=} removes
+      exactly the one handler passed to it.
+    \item Both statements are rejected: \texttt{CS0070: The event
+      'Alarm.Triggered' can only appear on the left hand side of += or -=
+      (except when used from within the type 'Alarm').}
+    \item With a plain delegate field both compile -- any caller could then
+      discard all subscribers or raise the alarm itself.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{That is what \texttt{event} buys you: outside the declaring type only
+  \texttt{+=} and \texttt{-=} are permitted. Inside, \texttt{Triggered} is
+  \texttt{null} while nobody is subscribed, which is why
+  \texttt{Triggered?.Invoke(\ldots)} uses the null-conditional operator.}
+\end{solutionframe}
+
+\begin{exerciseframe}{One Method Instead of Two}
+  \texttt{SumOfOdds} differs from \texttt{SumOfEvens} in the comparison only.
+  Replace both by a single method that receives the criterion as a parameter.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static int SumOfEvens(List<int> items)
+{
+  int result = 0;
+  foreach (int item in items)
+  {
+    if (item % 2 == 0)
+    {
+      result += item;
+    }
+  }
+  return result;
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{One Method Instead of Two}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static int Sum(List<int> items, Func<int, bool> keep)
+{
+  int result = 0;
+  foreach (int item in items)
+  {
+    if (keep(item))
+    {
+      result += item;
+    }
+  }
+  return result;
+}
+
+int evens = Sum(numbers, n => n % 2 == 0);   // 6
+int odds = Sum(numbers, n => n % 2 != 0);    // 4
+  \end{lstlisting}
+  \hint{Passing behaviour instead of duplicating loops is the very shape behind
+  LINQ's \texttt{Where}.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Behaviour as a Parameter}
+  Implement \texttt{Retry} so that it calls \texttt{attempt} at most
+  \texttt{times} times and yields \texttt{true} as soon as one call succeeds.
+  What do the two statements print?
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static bool Retry(int times, Func<bool> attempt)
+
+int calls = 0;
+Func<bool> succeedsOnThird = () => ++calls == 3;
+
+Console.WriteLine(Retry(5, succeedsOnThird));
+calls = 0;
+Console.WriteLine(Retry(2, succeedsOnThird));
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Behaviour as a Parameter}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static bool Retry(int times, Func<bool> attempt)
+{
+  for (int i = 0; i < times; i++)
+  {
+    if (attempt())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+  \end{lstlisting}
+  The statements print \texttt{True} and \texttt{False}: three attempts are
+  granted in the first case, only two in the second.
+  \vspace{1ex}
+
+  \hint{\texttt{Func<bool>} takes no arguments and returns a \texttt{bool}. Were
+  there nothing to return, \texttt{Action} would be the counterpart.}
+\end{solutionframe}
 
 \begin{frame}[fragile]{Operator Overloading}
   \begin{itemize}
