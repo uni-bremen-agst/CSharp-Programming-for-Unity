@@ -150,7 +150,6 @@ c.Count = -1;   // must throw
 \begin{solutionframe}{Validation Without Breaking Callers}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 private int count;
-
 public int Count
 {
   get => count;
@@ -165,10 +164,11 @@ public int Count
 }
   \end{lstlisting}
 
-  \hint{\texttt{value} is the implicit parameter of the setter. Since call sites
-  never change, you can start with an auto-implemented property and add
-  validation later -- which is why C\# exposes properties where Java exposes
-  getters and setters.}
+  \hint{\texttt{value} is the implicit parameter of the setter, and
+  \texttt{nameof(value)} turns its name into the string \texttt{"value"}. Since
+  call sites never change, you can start with an auto-implemented property and
+  add validation later -- which is why C\# exposes properties where Java
+  exposes getters and setters.}
 \end{solutionframe}
 
 \begin{exerciseframe}{A Computed Property}
@@ -223,6 +223,9 @@ public bool IsEmpty
       copies the whole value. A common bug when coming from Java is
       expecting mutations to a struct field of another object to
       "stick".
+    \item Whenever a property, an indexer or a method returns a struct, it
+      returns a copy. Assigning to a field of that copy is rejected by the
+      compiler (error CS1612), as the copy would be discarded right away.
   \end{itemize}
 \end{frame}
 
@@ -655,6 +658,9 @@ names
       interface).
     \item Generics: C\# generics are reified (the type is known at run
       time); Java generics use type erasure.
+    \item \texttt{nameof(x)} yields the name of \texttt{x} as a string, hence
+      parameter names passed to exceptions survive a rename. Java has no
+      equivalent.
   \end{itemize}
   \vfill
 
