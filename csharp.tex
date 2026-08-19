@@ -510,6 +510,123 @@ public partial class Player
   \end{itemize}
 \end{frame}
 
+\begin{exerciseframe}{One File, Two Namespaces}
+  Put both classes into a \emph{single} file whose name matches neither of them,
+  in two different namespaces, and let \texttt{NodeView} use \texttt{Node}.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// file: totally-unrelated-name.cs
+namespace Company.Model
+{
+  public class Node { public string Name { get; set; } }
+}
+
+namespace Company.View
+{
+  public class NodeView { /* use Node here */ }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  How many files, and which file names, would Java have required?
+\end{exerciseframe}
+
+\begin{solutionframe}{One File, Two Namespaces}
+
+  \texttt{Company.View.NodeView} using  \texttt{Company.Model.Node}:
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+namespace Company.View
+{
+  using Company.Model;
+
+  public class NodeView
+  {
+    private Node node = new Node();
+  }
+}
+  \end{lstlisting}
+  Java would have required two files, \texttt{Node.java} and
+  \texttt{NodeView.java}, in directories mirroring the package names.
+  \vspace{2ex}
+
+  \hint{A \texttt{using} directive may sit at the top of the file or inside a
+  namespace, where it then applies to that namespace only. Without it, the
+  fully qualified \texttt{Company.Model.Node} does the job as well.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Breaking the Partial Rules}
+  Split \texttt{Player} across \texttt{Player.cs} and
+  \texttt{Player.Combat.cs} as shown before. Then provoke two compilation errors, one at a
+  time, and predict the message before compiling.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Drop the \texttt{partial} keyword from one of the two declarations.
+    \item Let the two parts declare \emph{different} base classes.
+  \end{itemize}
+  \vspace{1ex}
+
+  And does every part have to name the base class?
+\end{exerciseframe}
+
+\begin{solutionframe}{Breaking the Partial Rules}
+  \begin{itemize}
+    \item Missing keyword -- \texttt{CS0260: Missing partial modifier on
+      declaration of type 'Player'; another partial declaration of this type
+      exists.}
+    \item Different base classes -- \texttt{CS0263: Partial declarations of
+      'Player' must not specify different base classes.}
+    \item No. It suffices that \emph{one} part names the base class, the others
+      may omit it. They must only never contradict each other.
+  \end{itemize}
+  \vspace{4ex}
+
+  \hint{All parts are merged into a single type, hence any disagreement between
+  them is an error.}
+\end{solutionframe}
+
+\begin{exerciseframe}{The Default Access Modifier}
+  This does not compile. Explain why, using the rule from the previous slide,
+  then give two different fixes.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+class Config
+{
+  public int Volume { get; set; }
+}
+
+public class Service
+{
+  public Config GetConfig()
+  {
+    return new Config();
+  }
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{The Default Access Modifier}
+  \texttt{Config} carries no access modifier and is therefore
+  \texttt{internal}, whereas \texttt{GetConfig} is \texttt{public}. A public
+  member must not expose a type less accessible than itself:
+  \vspace{1ex}
+
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+CS0050: Inconsistent accessibility: return type
+'Config' is less accessible than method
+'Service.GetConfig()'
+  \end{lstlisting}
+  Either declare \texttt{Config} as \texttt{public}, or restrict
+  \texttt{GetConfig} to \texttt{internal}.
+  \vspace{4ex}
+
+  \hint{Nested types default to \texttt{private} rather than
+  \texttt{internal} -- the default depends on where the type is declared.}
+\end{solutionframe}
+
 \begin{frame}{Delegates, Lambdas, and Events}
   \begin{itemize}
     \item Java: callbacks are modeled with functional interfaces
