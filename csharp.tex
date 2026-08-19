@@ -351,6 +351,9 @@ transform.position =
     \item C\#: reference types may be \texttt{null} just like in Java;
       value types are \emph{not} nullable unless explicitly wrapped,
       e.g.\ \texttt{int?\ x = null;} (short for \texttt{Nullable<int>}).
+    \item \texttt{Nullable<T>} provides \texttt{HasValue} to ask whether a value
+      is present and \texttt{Value} to unwrap it. Reading \texttt{Value} of an
+      empty nullable throws an \texttt{InvalidOperationException}.
     \item Convenience operators without a Java equivalent:
       \begin{itemize}
         \item \texttt{a?.Foo()} -- null-conditional call, evaluates to
@@ -360,6 +363,88 @@ transform.position =
       \end{itemize}
   \end{itemize}
 \end{frame}
+
+\begin{exerciseframe}{A Nullable Return Value}
+  Implement \texttt{SafeDivide} so that it yields \texttt{null} instead of
+  throwing when the divisor is zero. What do the three statements print?
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static int? SafeDivide(int a, int b)
+{
+  // your code here
+}
+
+Console.WriteLine(SafeDivide(10, 2) ?? -1);
+Console.WriteLine(SafeDivide(10, 0) ?? -1);
+Console.WriteLine(SafeDivide(10, 0).Value);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Why can the return type not simply be \texttt{int}?
+\end{exerciseframe}
+
+\begin{solutionframe}{A Nullable Return Value}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static int? SafeDivide(int a, int b)
+{
+  if (b == 0)
+  {
+    return null;
+  }
+  return a / b;
+}
+  \end{lstlisting}
+  The first and second statements print \texttt{5} and \texttt{-1}, respectively, and the third one
+  throws an \texttt{InvalidOperationException}. An \texttt{int} cannot be
+  \texttt{null}, hence the result has to be wrapped.
+  \vspace{1ex}
+  \vspace{3ex}
+
+  \hint{\texttt{int?} is \texttt{Nullable<int>}, a struct offering
+  \texttt{HasValue} and \texttt{Value}. Query \texttt{HasValue} or supply a
+  fallback with \texttt{??} rather than reaching for \texttt{Value}. Java would
+  need \texttt{Integer} or \texttt{Optional<Integer>} here.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Chaining the Null-Conditional Operator}
+  Compute the length of the ZIP code in a single expression, yielding
+  \texttt{-1} if the person, the address or the ZIP code is \texttt{null}.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+class Address { public string Zip { get; set; } }
+class Person { public Address Home { get; set; } }
+
+Person person = null;
+int length = // your expression here
+  \end{lstlisting}
+  \vspace{1ex}
+
+  What is the static type of \texttt{person?.Home?.Zip?.Length}?
+\end{exerciseframe}
+
+\begin{solutionframe}{Chaining the Null-Conditional Operator}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+int length = person?.Home?.Zip?.Length ?? -1;
+  \end{lstlisting}
+  \begin{itemize}
+    \item The type of \texttt{person?.Home?.Zip?.Length} is \texttt{int?}, not
+      \texttt{int}:\\
+       \texttt{?.} lifts the result of a value type to its
+      nullable counterpart.
+    \item The chain short-circuits. As soon as one link is \texttt{null}, the
+      whole expression is \texttt{null} and the remaining links are never
+      evaluated.
+  \end{itemize}
+  \vspace{3ex}
+
+  \hint{Java requires nested \texttt{if} statements or a chain of
+  \texttt{Optional.map} calls for this.}
+  \vspace{1ex}
+
+  \hint{\texttt{?.} guards method calls as well, e.g.\ \texttt{list?.Clear()}.}
+\end{solutionframe}
 
 \begin{frame}{Namespaces and Packages}
   \begin{itemize}
