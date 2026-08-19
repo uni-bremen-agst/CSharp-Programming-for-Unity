@@ -1304,25 +1304,73 @@ Derived
   methods are therefore a poor fit wherever polymorphic behaviour is wanted.}
 \end{solutionframe}
 
-\begin{frame}{Takeaways for Unity}
+\begin{frame}[fragile]{Virtual and Override}
+  \framelabel{slide:virtual}
   \begin{itemize}
-    \item \texttt{MonoBehaviour} callbacks (\texttt{Start}, \texttt{Update},
-      \ldots) are ordinary C\# methods matched by name and signature --
-      no \texttt{@Override} annotation, so a typo silently creates an
-      unused method instead of a compiler error.
-    \item Math and value types (\texttt{Vector3}, \texttt{Quaternion},
-      \texttt{Color}, \texttt{struct}s in general) are copied by value --
-      watch out for the Java habit of expecting shared, mutable state.
-    \item Coroutines (\texttt{IEnumerator} + \texttt{yield return}) provide
-      cooperative multitasking with no direct Java counterpart.
+    \item Java: every method is virtual, and \texttt{@Override} is an optional
+      annotation letting the compiler check your intention.
+    \item C\#: a method is \emph{not} virtual by default. The base class has to
+      offer \texttt{virtual} (or \texttt{abstract}), and the derived class has to
+      state \texttt{override}.
+    \item Overriding something not virtual is an error (\texttt{CS0506}).
+      Repeating a signature without \texttt{override} hides the inherited method
+      and warns (\texttt{CS0108}), while \texttt{new} declares the hiding as
+      intended.
   \end{itemize}
-  \pause
-  \vfill
+  \vspace{1ex}
 
-  \hint{A \texttt{struct} assignment always copies -- if you mutate a
-    struct returned by a property or method, you are mutating a
-    temporary copy, not the original.}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+class Base
+{
+  public virtual string Speak() => "Base";
+  public string Walk() => "Base";
+}
+
+class Sub : Base
+{
+  public override string Speak() => "Sub";  // overrides
+  public new string Walk() => "Sub";        // hides
+}
+  \end{lstlisting}
 \end{frame}
+
+\begin{exerciseframe}{Override or Hide?}
+  Predict the three outputs for the classes of \slideref{slide:virtual}, then
+  explain the difference.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Base asBase = new Sub();
+Console.WriteLine(asBase.Speak());
+Console.WriteLine(asBase.Walk());
+Console.WriteLine(((Sub)asBase).Walk());
+  \end{lstlisting}
+  \vspace{1ex}
+
+  And what happens if you drop \texttt{new} from \texttt{Sub.Walk}, or write
+  \texttt{override} there instead?
+\end{exerciseframe}
+
+\begin{solutionframe}{Override or Hide?}
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+Sub
+Base
+Sub
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{Speak} is virtual and overridden, hence the run-time type
+      decides.
+    \item \texttt{Walk} is hidden rather than overridden, hence the static type
+      decides, and only the cast reaches \texttt{Sub.Walk}.
+    \item Without \texttt{new} the code still compiles, but warns
+      (\texttt{CS0108}). With \texttt{override} it no longer compiles
+      (\texttt{CS0506}), as \texttt{Base.Walk} is not virtual.
+  \end{itemize}
+  \vspace{4ex}
+
+  \hint{In Java the second line would print \texttt{Sub}, since every instance
+  method is virtual there and hiding one is not possible at all.}
+\end{solutionframe}
 
 %%% Local Variables:
 %%% mode: latex
