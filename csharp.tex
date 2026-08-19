@@ -459,6 +459,28 @@ int length = person?.Home?.Zip?.Length ?? -1;
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Assemblies}
+  \begin{itemize}
+    \item An assembly is the unit C\# code is compiled into: the \texttt{.dll}
+      or \texttt{.exe} holding intermediate language and metadata. One project
+      yields exactly one assembly.
+    \item Assemblies and namespaces are independent of each other: an assembly
+      may contain many namespaces, and a namespace may span several assemblies.
+    \item Using a type from another assembly requires a \emph{reference} to
+      that assembly. A \texttt{using} directive only abbreviates names, it does
+      not make types available.
+    \item The assembly is the boundary \texttt{internal} refers to. The Java
+      counterparts are the JAR, which only packages, and the module of Java 9,
+      which does restrict access across its boundary.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{In Unity each \texttt{.asmdef} file defines one assembly; scripts not
+  covered by any of them land in \texttt{Assembly-CSharp}. As compilation
+  happens per assembly, splitting a project into several of them also shortens
+  recompile times.}
+\end{frame}
+
 \begin{frame}[fragile]{Partial Classes: One Type, Multiple Files}
   \begin{itemize}
     \item Java: a (non-nested) class must be fully defined in a single file.
