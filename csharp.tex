@@ -1150,6 +1150,47 @@ Console.WriteLine(query.Count());
 
 \end{frame}
 
+\begin{frame}[fragile]{Extension Methods}
+  \begin{itemize}
+    \item An extension method is a \texttt{static} method in a non-generic
+      \texttt{static} class whose first parameter carries the \texttt{this}
+      modifier, naming the type to be extended.
+    \item It is called as if it were an instance method of that type; the
+      compiler turns such a call into the plain static call.
+  \end{itemize}
+  \vspace{1ex}
+
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+      \textbf{Declaration}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public static class IntExtensions
+{
+  public static bool IsEven(this int n)
+  {
+    return n % 2 == 0;
+  }
+}
+      \end{lstlisting}
+    \column{0.45\textwidth}
+      \textbf{Two calls, one meaning}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+7.IsEven();
+
+IntExtensions.IsEven(7);
+      \end{lstlisting}
+  \end{columns}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item An extension method reaches only what is accessible from outside, and
+      it loses against an instance method of the same signature.
+    \item LINQ rests upon them: \texttt{Where} and \texttt{Select} are extension
+      methods of \texttt{IEnumerable<T>}, which is why they chain onto any
+      collection (\slideref{slide:linq}).
+  \end{itemize}
+\end{frame}
+
 \begin{exerciseframe}{An Extension Method}
   Write \texttt{IsBlank} as an extension method on \texttt{string}, yielding
   \texttt{true} for the empty string and for a string of blanks. Where does the
