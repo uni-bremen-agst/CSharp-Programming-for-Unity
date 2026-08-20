@@ -15,3 +15,303 @@
   \end{itemize}
 
 \end{frame}
+
+\begin{frame}{Collections: Java and C\#}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{lll}
+      \hline
+      \textbf{Java} & \textbf{C\#} & \textbf{Kind}\\
+      \hline
+      \texttt{ArrayList<T>}  & \texttt{List<T>}            & class\\
+      \texttt{List<T>}       & \texttt{IList<T>}           & interface\\
+      \texttt{HashMap<K,V>}  & \texttt{Dictionary<K,V>}    & class\\
+      \texttt{Map<K,V>}      & \texttt{IDictionary<K,V>}   & interface\\
+      \texttt{HashSet<T>}    & \texttt{HashSet<T>}         & class\\
+      \texttt{Set<T>}        & \texttt{ISet<T>}            & interface\\
+      \texttt{Iterable<T>}   & \texttt{IEnumerable<T>}     & interface\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{1ex}
+
+  \hint{The trap for Java programmers: \texttt{List<T>} is a \emph{class} in
+  C\#, corresponding to \texttt{ArrayList}, not an interface. Interfaces are
+  spelled with a leading \texttt{I}, which is a naming convention rather than a
+  language rule.}
+\end{frame}
+
+\begin{frame}{IEnumerable: The Common Denominator}
+  \begin{itemize}
+    \item \texttt{IEnumerable<T>} is what \texttt{foreach} needs and what every
+      collection offers. It promises no more than that its elements can be
+      visited one after the other.
+    \item All LINQ operators are extension methods
+      (\slideref{slide:extensions}) of \texttt{IEnumerable<T>}. That is why they
+      are available on every collection without any collection knowing about
+      LINQ.
+    \item An \texttt{IEnumerable<T>} need not be a collection at all. It may
+      compute its elements while being visited, which is what makes an infinite
+      sequence or a query over a file possible.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Declare parameters as \texttt{IEnumerable<T>} when you only iterate,
+  and as \texttt{IList<T>} or \texttt{ISet<T>} when you need indexing, counting
+  or membership tests.}
+\end{frame}
+
+\begin{frame}{The Operators You Will Actually Use}
+  \begin{itemize}
+    \item Filtering and mapping: \texttt{Where}, \texttt{Select},
+      \texttt{SelectMany}, \texttt{Distinct}, \texttt{Cast},
+      \texttt{OfType}.
+    \item Asking questions: \texttt{Any}, \texttt{All}, \texttt{Contains},
+      \texttt{Count}, \texttt{Sum}, \texttt{Min}, \texttt{Max}.
+    \item Picking single elements: \texttt{First}, \texttt{FirstOrDefault},
+      \texttt{Single}, \texttt{SingleOrDefault}.
+    \item Sorting and grouping: \texttt{OrderBy}, \texttt{OrderByDescending},
+      \texttt{ThenBy}, \texttt{GroupBy}.
+    \item Materializing: \texttt{ToList}, \texttt{ToArray},
+      \texttt{ToHashSet}, \texttt{ToDictionary}.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{\texttt{First} throws when nothing matches, \texttt{FirstOrDefault}
+  yields \texttt{default(T)}, which is \texttt{null} for a reference type.
+  \texttt{Single} additionally insists that there be no second match.}
+\end{frame}
+
+\begin{frame}[fragile]{Two Syntaxes, One Meaning}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \textbf{Method syntax}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+nodes.Where(n => n.Type == "Class")
+     .OrderBy(n => n.Id)
+     .Select(n => n.Id)
+     .ToList();
+      \end{lstlisting}
+    \column{0.5\textwidth}
+      \textbf{Query syntax}
+      \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+(from n in nodes
+ where n.Type == "Class"
+ orderby n.Id
+ select n.Id).ToList();
+      \end{lstlisting}
+  \end{columns}
+  \vspace{1ex}
+
+  The compiler translates query syntax into the very same calls, hence the two
+  are interchangeable. Query syntax pays off for joins and for several
+  \texttt{from} clauses, method syntax for short chains.
+  \vspace{1ex}
+
+  \hint{SEE uses method syntax exclusively: its sources contain no single query
+  expression. Follow that convention.}
+\end{frame}
+
+\begin{frame}[fragile]{LINQ in SEE}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Graph.cs: all node types occurring in a graph
+Nodes().Select(n => n.Type).ToHashSet();
+
+// LSPImporter.cs: the first node isomorphic to a given one
+graph.Nodes().FirstOrDefault(x => AreIsomorphic(node, x));
+
+// SourceRangeIndex.cs: does every child satisfy a predicate?
+files.Values.SelectMany(file => file.Children).All(IsHomomorphic);
+
+// IncrementalTreeMap: an index of nodes by their ID
+nodes.ToDictionary(n => n.ID, n => n);
+
+// NodeSearch.cs: nodes grouped by their string representation
+graph.Nodes().GroupBy(ElementToString)
+             .ToDictionary(g => g.Key, g => g.ToList());
+  \end{lstlisting}
+  \vspace{1ex}
+
+  About a fifth of SEE's C\# files use LINQ. Most frequent are
+  \texttt{Contains}, \texttt{ToList}, \texttt{Select} and \texttt{Where}.
+\end{frame}
+
+\begin{frame}[fragile]{SEE Extends LINQ}
+  As LINQ operators are nothing but extension methods, SEE adds its own, which
+  then chain with the predefined ones:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// DataModel/DG/GraphElementExtensions.cs
+public static IEnumerable<T> WithGameObject<T>
+    (this IEnumerable<T> elements) where T : GraphElement
+  => elements.Where(HasGameObject);
+
+// hence:
+graph.Nodes().WithGameObject().Select(n => n.ID);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \hint{\texttt{Utils/CollectionExtensions.cs} collects further operators of
+  this kind, among them \texttt{GetOrAdd}, \texttt{RemoveWhere} and
+  \texttt{Toggle}.}
+\end{frame}
+
+\begin{frame}[fragile]{Pitfalls}
+  \begin{itemize}
+    \item A query describes work rather than doing it. Enumerating it twice
+      does the work twice, which is why an expensive query is usually closed
+      with \texttt{ToList()}.
+    \item Modifying the underlying collection while enumerating it throws,
+      even when the query itself looks harmless.
+  \end{itemize}
+  \vspace{1ex}
+
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+InvalidOperationException: Collection was modified;
+enumeration operation may not execute.
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \hint{Materialize before you modify: iterate over
+  \texttt{nodes.Where(\ldots).ToList()} when the loop body adds to or removes
+  from \texttt{nodes}.}
+\end{frame}
+
+\begin{exerciseframe}{From Loop to Query}
+  Replace the loop by a single LINQ chain yielding the same list.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<string> result = new List<string>();
+foreach (Node node in nodes)
+{
+  if (node.Type == "Class")
+  {
+    result.Add(node.Id);
+  }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Which operator replaces the \texttt{if}, and which one the \texttt{Add}?
+\end{exerciseframe}
+
+\begin{solutionframe}{From Loop to Query}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<string> result = nodes.Where(n => n.Type == "Class")
+                           .Select(n => n.Id)
+                           .ToList();
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{Where} takes the role of the \texttt{if}, \texttt{Select}
+      that of the expression handed to \texttt{Add}.
+    \item \texttt{ToList} is what actually builds the list. Without it you get
+      a description of the work, not a result.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{The chain says \emph{what} is wanted, the loop said \emph{how} to get
+  it. That is the whole point of LINQ.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Select or SelectMany?}
+  Every node carries a list of children. Predict both numbers and, more
+  importantly, both static types.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// three nodes, carrying 2, 2 and 0 children
+Console.WriteLine(nodes.Select(n => n.Children).Count());
+Console.WriteLine(nodes.SelectMany(n => n.Children).Count());
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Select or SelectMany?}
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+3
+4
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{Select} maps every node to its list, yielding an
+      \texttt{IEnumerable<List<Node>>} of three lists.
+    \item \texttt{SelectMany} concatenates those lists into a single
+      \texttt{IEnumerable<Node>} of four children.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Whenever a mapping yields a collection per element and you want the
+  elements rather than the collections, \texttt{SelectMany} is the operator.
+  SEE uses it to descend into children and file extensions.}
+\end{solutionframe}
+
+\begin{exerciseframe}{An Index by Type}
+  Build a dictionary mapping every node type to the list of nodes of that type,
+  in a single chain. What does it yield for the three nodes below?
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// A and B are of type "Class", C is of type "File"
+Dictionary<string, List<Node>> byType = // your chain here
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Which operator groups, and which one turns the groups into a dictionary?
+\end{exerciseframe}
+
+\begin{solutionframe}{An Index by Type}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Dictionary<string, List<Node>> byType
+  = nodes.GroupBy(n => n.Type)
+         .ToDictionary(g => g.Key, g => g.ToList());
+
+// Class = 2, File = 1
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{GroupBy} yields a sequence of groups, each an
+      \texttt{IEnumerable<Node>} carrying a \texttt{Key}.
+    \item \texttt{ToDictionary} needs two functions: one for the key, one for
+      the value.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{This is precisely what \texttt{NodeSearch} in SEE does to index all
+  nodes of a graph. A duplicate key makes \texttt{ToDictionary} throw, hence
+  group first.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Your Own LINQ Operator}
+  Write \texttt{WithType} as an extension method, so that it can be chained
+  like any predefined operator.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+nodes.WithType("Class").Select(n => n.Id);   // A, B
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Where does it have to be declared, and what does it return so that
+  \texttt{Select} can follow?
+\end{exerciseframe}
+
+\begin{solutionframe}{Your Own LINQ Operator}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public static class NodeExtensions
+{
+  public static IEnumerable<Node> WithType
+      (this IEnumerable<Node> nodes, string type)
+    => nodes.Where(n => n.Type == type);
+}
+  \end{lstlisting}
+  \begin{itemize}
+    \item A non-generic static class, with \texttt{this} on the first
+      parameter, exactly as on \slideref{slide:extensions}.
+    \item Returning \texttt{IEnumerable<Node>} is what keeps the chain open,
+      and it keeps the operator lazy: nothing is filtered until enumerated.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{This is the shape of SEE's \texttt{WithGameObject}. Returning
+  \texttt{List<Node>} instead would work too, but would enumerate eagerly and
+  allocate.}
+\end{solutionframe}
