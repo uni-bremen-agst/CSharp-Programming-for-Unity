@@ -54,14 +54,14 @@
       compute its elements while being visited, which is what makes an infinite
       sequence or a query over a file possible.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{Declare parameters as \texttt{IEnumerable<T>} when you only iterate,
   and as \texttt{IList<T>} or \texttt{ISet<T>} when you need indexing, counting
   or membership tests.}
 \end{frame}
 
-\begin{frame}{The Operators You Will Actually Use}
+\begin{frame}{The Operators we Actually Use in SEE}
   \begin{itemize}
     \item Filtering and mapping: \texttt{Where}, \texttt{Select},
       \texttt{SelectMany}, \texttt{Distinct}, \texttt{Cast},
@@ -75,7 +75,7 @@
     \item Materializing: \texttt{ToList}, \texttt{ToArray},
       \texttt{ToHashSet}, \texttt{ToDictionary}.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{\texttt{First} throws when nothing matches, \texttt{FirstOrDefault}
   yields \texttt{default(T)}, which is \texttt{null} for a reference type.
@@ -106,10 +106,10 @@ nodes.Where(n => n.Type == "Class")
   The compiler translates query syntax into the very same calls, hence the two
   are interchangeable. Query syntax pays off for joins and for several
   \texttt{from} clauses, method syntax for short chains.
-  \vspace{1ex}
+  \vspace{4ex}
 
-  \hint{SEE uses method syntax exclusively: its sources contain no single query
-  expression. Follow that convention.}
+  \hint{SEE currently uses method syntax exclusively: its sources contain no single query
+  expression.}
 \end{frame}
 
 \begin{frame}[fragile]{LINQ in SEE}
@@ -150,7 +150,7 @@ public static IEnumerable<T> WithGameObject<T>
 // hence:
 graph.Nodes().WithGameObject().Select(n => n.ID);
   \end{lstlisting}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{\texttt{Utils/CollectionExtensions.cs} collects further operators of
   this kind, among them \texttt{GetOrAdd}, \texttt{RemoveWhere} and
@@ -171,7 +171,7 @@ graph.Nodes().WithGameObject().Select(n => n.ID);
 InvalidOperationException: Collection was modified;
 enumeration operation may not execute.
   \end{lstlisting}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{Materialize before you modify: iterate over
   \texttt{nodes.Where(\ldots).ToList()} when the loop body adds to or removes
@@ -209,15 +209,16 @@ List<string> result = nodes.Where(n => n.Type == "Class")
     \item \texttt{ToList} is what actually builds the list. Without it you get
       a description of the work, not a result.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{The chain says \emph{what} is wanted, the loop said \emph{how} to get
   it. That is the whole point of LINQ.}
 \end{solutionframe}
 
 \begin{exerciseframe}{Select or SelectMany?}
-  Every node carries a list of children. Predict both numbers and, more
-  importantly, both static types.
+  A \texttt{Node} has a property \texttt{Children} of type
+  \texttt{List<Node>}. Predict both numbers and, more importantly, both static
+  types.
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -251,7 +252,7 @@ Console.WriteLine(nodes.SelectMany(n => n.Children).Count());
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// A and B are of type "Class", C is of type "File"
+// A and B are of type "Class", C is of type "File".
 Dictionary<string, List<Node>> byType = // your chain here
   \end{lstlisting}
   \vspace{1ex}
