@@ -216,7 +216,7 @@ List<string> result = nodes.Where(n => n.Type == "Class")
   \vspace{4ex}
 
   \hint{The chain says \emph{what} is wanted, the loop said \emph{how} to get
-  it. That is the whole point of LINQ.}
+  it.\\ That is the whole point of LINQ.}
 \end{solutionframe}
 
 \begin{exerciseframe}{Select or SelectMany?}
@@ -243,7 +243,7 @@ Console.WriteLine(nodes.SelectMany(n => n.Children).Count());
     \item \texttt{SelectMany} concatenates those lists into a single
       \texttt{IEnumerable<Node>} of four children.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{Whenever a mapping yields a collection per element and you want the
   elements rather than the collections, \texttt{SelectMany} is the operator.
@@ -278,7 +278,7 @@ Dictionary<string, List<Node>> byType
     \item \texttt{ToDictionary} needs two functions: one for the key, one for
       the value.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{This is precisely what \texttt{NodeSearch} in SEE does to index all
   nodes of a graph. A duplicate key makes \texttt{ToDictionary} throw, hence
@@ -314,7 +314,7 @@ public static class NodeExtensions
     \item Returning \texttt{IEnumerable<Node>} is what keeps the chain open,
       and it keeps the operator lazy: nothing is filtered until enumerated.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{4ex}
 
   \hint{This is the shape of SEE's \texttt{WithGameObject}. Returning
   \texttt{List<Node>} instead would work too, but would enumerate eagerly and
