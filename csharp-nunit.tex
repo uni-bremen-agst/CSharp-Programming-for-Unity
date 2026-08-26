@@ -839,19 +839,20 @@ public IEnumerator TestMenuOption1()
 [Test]
 public void TestBasenameOfFile()
 {
-  Assert.AreEqual("MyFile.cs", Filenames.Basename("Assets/MyFile.cs"));
+  Assert.That(Filenames.Basename("Assets/MyFile.cs", '/'),
+              Is.EqualTo("MyFile.cs"));
 }
 
 [Test]
 public void TestBasenameOfDirectory()
 {
-  Assert.AreEqual("", Filenames.Basename("MyDir/"));
+  Assert.That(Filenames.Basename("MyDir/", '/'), Is.EqualTo(""));
 }
 
 [Test]
 public void TestBasenameOfNull()
 {
-  Assert.AreEqual("", Filenames.Basename(null));
+  Assert.That(Filenames.Basename(null, '/'), Is.EqualTo(""));
 }
   \end{lstlisting}
   \vspace{1ex}
@@ -866,8 +867,8 @@ public void TestBasenameOfNull()
 [TestCase(null, "")]
 public void TestBasename(string path, string expected)
 {
-  Assert.AreEqual(expected, Filenames.Basename(path),
-                  $"Basename of {path}");
+  Assert.That(Filenames.Basename(path, '/'), Is.EqualTo(expected),
+              $"Basename of {path}");
 }
   \end{lstlisting}
   \begin{itemize}
@@ -879,8 +880,9 @@ public void TestBasename(string path, string expected)
   \end{itemize}
   \vspace{2ex}
 
-  \hint{This is exactly \texttt{TestFilenames} in SEE, which covers 14 cases in
-  three methods. Adding a case must be cheaper than not adding it.}
+  \hint{This is exactly \texttt{TestFilenames} in SEE, where three parameterized
+  methods carry 23 cases between them. Adding a case must be cheaper than not
+  adding it.}
 \end{solutionframe}
 
 \begin{exerciseframe}{Which Skip Mechanism?}
