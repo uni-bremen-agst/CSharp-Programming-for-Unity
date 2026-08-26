@@ -586,6 +586,10 @@ public IEnumerator LoadFromForeignServer() =>
 \end{frame}
 
 \begin{frame}[fragile]{Skipping in SEE: Static Decisions}
+    % lstlisting is verbatim, so \footnote cannot simply be written inside it.
+    % The listing carries escapeinside={(*}{*)}, which makes anything between
+    % (* and *) be typeset as ordinary LaTeX. The marker is (*\footnotemark*)
+    % at the end of the code line, with \footnotetext{…} placed just after the listing.
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily,escapeinside={(*}{*)}]
 // Not implemented yet, and everyone should be reminded of it.
 [Ignore("GitEvolutionGraphProvider is not implemented yet.")]
