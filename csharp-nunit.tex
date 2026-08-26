@@ -295,6 +295,12 @@ public void DeleteRepository() { ... }
   \end{lstlisting}
   \vspace{1ex}
 
+  The four attributes bracket a test at two scopes: once per fixture, for what
+  is expensive to build, and once per test, for what must be pristine every
+  time.
+\end{frame}
+
+\begin{frame}{Fixture Lifecycle: Order and Guarantees}
   \begin{itemize}
     \item Set-up runs from the most basic class down to the most derived one,
       tear-down in the opposite direction.
@@ -306,9 +312,60 @@ public void DeleteRepository() { ... }
   \vspace{2ex}
 
   \hint{Give set-up methods distinct names across a fixture hierarchy. NUnit
-  identifies them by name, so a derived method hiding a base one of the same
-  name is a trap --- SEE's \texttt{TestUI.SetUp} and \texttt{TestMenu.SetUp}
-  sail rather close to it.}
+  identifies them by name, so a derived method that overrides or hides a base
+  one of the same name is a trap (\slideref{slide:setuptrap}).}
+\end{frame}
+
+\begin{frame}[fragile]{The Set-Up Trap: Overriding Is Not Adding}
+  \framelabel{slide:setuptrap}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+internal class TestReflexionAnalysis            // the base fixture
+{
+  [SetUp]
+  protected virtual void Setup()
+  {
+    graph = new ReflexionGraph("DUMMYBASEPATH");
+  }
+}
+
+internal class TestIncrementalReflexion : TestReflexionAnalysis
+{
+  [SetUp]
+  protected override void Setup()
+  {
+    base.Setup();        // <-- delete this and graph stays null
+    AddImplementation();
+  }
+}
+  \end{lstlisting}
+
+  An \texttt{override} is not an addition: there is only \emph{one} method.
+  NUnit calls it once, and the base body runs only because
+  \texttt{base.Setup()} says so.
+\end{frame}
+
+\begin{frame}{The Set-Up Trap: Why It Hurts}
+  Both fixtures above really exist in SEE, and both derived ones do call
+  \texttt{base.Setup()}. Drop that one line and every test in the derived
+  fixture fails with a \texttt{NullReferenceException} raised in the
+  \emph{base} class --- far away from the derived fixture that caused it.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item With \emph{distinct} names NUnit chains the set-ups for you, base
+      first, and no explicit \texttt{base} call is needed anywhere.
+    \item With the \emph{same} name you take over that responsibility, silently
+      and for every future subclass.
+    \item Reusing the name without \texttt{virtual}/\texttt{override} does not
+      even override: it hides. The compiler says so only in warning CS0108,
+      ``hides inherited member''.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Name set-up methods after what they do --- \texttt{CreateGraph},
+  \texttt{AddImplementation} --- rather than after the attribute they carry.
+  Then two fixtures in one hierarchy cannot collide by accident, and the
+  question of overriding never comes up.}
 \end{frame}
 
 \begin{frame}[fragile]{Parameterized Tests}
