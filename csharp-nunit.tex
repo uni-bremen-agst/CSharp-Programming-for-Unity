@@ -460,7 +460,7 @@ public IEnumerator TestMenuOption1()
   yield return new WaitForSeconds(TimeUntilMenuIsSetup);
   PressButton(MenuTitle, OptionOne);
   yield return new WaitForEndOfFrame();
-  Assert.AreEqual(1, selection);
+  Assert.That(selection, Is.EqualTo(1));
 }
   \end{lstlisting}
   \vspace{1ex}
@@ -586,17 +586,19 @@ public IEnumerator LoadFromForeignServer() =>
 \end{frame}
 
 \begin{frame}[fragile]{Skipping in SEE: Static Decisions}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily,escapeinside={(*}{*)}]
 // Not implemented yet, and everyone should be reminded of it.
 [Ignore("GitEvolutionGraphProvider is not implemented yet.")]
 [UnityTest]
 public IEnumerator TestGitEvolutionProvider() { ... }
 
 // A whole fixture parked while a ticket is open.
-[Explicit("Reflexion tests currently don't work, tracked in #481")]
+[Explicit("Reflexion tests currently don't work, tracked in #481")](*\footnotemark*)
 internal class TestReflexionAnalysis { ... }
   \end{lstlisting}
-  \vspace{1ex}
+  \footnotetext{The \texttt{[Explicit]} above is history: it was removed once
+    \#481 was closed.}
+  \vspace{-0.5ex}
 
   \begin{itemize}
     \item \texttt{[Ignore]} never runs and is reported as skipped, reason
@@ -604,11 +606,9 @@ internal class TestReflexionAnalysis { ... }
     \item \texttt{[Explicit]} runs only when you select it by name or filter.
       A normal run passes over it in silence.
   \end{itemize}
-  \vspace{1ex}
+  \vspace{0.5ex}
 
-  \hint{The \texttt{[Explicit]} above is history: it was removed once \#481 was
-  closed, and SEE currently has no explicit test at all. Both attributes are
-  meant to be temporary, and a repository is the wrong place to keep a
+  \hint{Both attributes are meant to be temporary, and a repository is the wrong place to keep a
   to-do list.}
 \end{frame}
 
