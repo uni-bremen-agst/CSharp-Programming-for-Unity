@@ -674,15 +674,18 @@ if (string.IsNullOrWhiteSpace(repo.AccessToken))
     \item Two tabs, \emph{EditMode} and \emph{PlayMode}, showing the tests of
       the corresponding assemblies as a tree of assembly, namespace, class and
       method.
-    \item \emph{Run All}, \emph{Run Selected} and \emph{Rerun Failed}. A
-      double-click on a test jumps to its source; the pane below shows the
-      failed assertion and its stack trace.
+    \item You have the choice of \emph{Run All}, \emph{Run Selected} and \emph{Rerun Failed}
+    shown at the bottom of the Test Runner window.
+    \item A double-click on a test runs it. To jump to its source, use
+      \emph{Open source code} in the context menu of the right mouse button.
+      The pane below shows the failed assertion and its stack trace for the test
+      selected by a single click.
     \item Filter by name with the search box, or by result with the red, green
       and grey toggles in the toolbar.
     \item \emph{Run All in Player} builds a player and runs the play-mode tests
       inside it --- the only way to catch what breaks outside the Editor.
   \end{itemize}
-  \vspace{2ex}
+  \vspace{1ex}
 
   \hint{Editing a script triggers a recompile, which discards the results and
   aborts a running play-mode test. Do not touch the code while the tests are
