@@ -80,7 +80,7 @@
     \item "\texttt{autoReferenced:false}" stops production code from accidentally
       depending on test code.
   \end{itemize}
-  \vspace{0.5ex}
+  \vspace{0.25ex}
 
   \hint{You never write this by hand. In the Test Runner window, the button
   \emph{Create EditMode Test Assembly Folder} generates folder and
@@ -143,9 +143,8 @@ namespace SEE.Utils
 \end{frame}
 
 \begin{frame}[fragile]{Assertions: Two Models}
-  NUnit offers a classic and a newer constraint-based assertion model. \\
-  The latter is used in SEE.
-  \vspace{0.5ex}
+  NUnit offers a classic and a newer constraint-based assertion model.
+  \vspace{0.25ex}
 
   \begin{columns}[T]
     \column{0.47\textwidth}
@@ -165,7 +164,7 @@ Assert.That(node.Parent, Is.Null);
 Assert.That(a, Is.SameAs(b));
       \end{lstlisting}
   \end{columns}
-  \vspace{0.5ex}
+  \vspace{0.25ex}
 
   \begin{itemize}
     \item \texttt{AreEqual} takes \emph{expected first}, \texttt{actual}
@@ -177,7 +176,7 @@ Assert.That(a, Is.SameAs(b));
   \end{itemize}
   \vspace{2ex}
 
-  \hint{Use \texttt{Assert.That}. It reads as a sentence, and
+  \hint{SEE uses \texttt{Assert.That}. It reads as a sentence, and
   \texttt{Is.EquivalentTo} for collections gives you a diff instead of
   \texttt{Expected: True, But was: False}.}
 \end{frame}
@@ -403,7 +402,7 @@ public void TestEquality(AbstractActionStateType type) { ... }
 \begin{frame}[fragile]{Asynchronous Tests}
   An edit-mode test may be \texttt{async} and return \texttt{Task}. NUnit awaits
   it and fails the test if the task faults.
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEETests/TestJacocoImporter.cs
@@ -414,7 +413,7 @@ public async Task TestLoadAsyncMethodAsync()
   Assert.AreEqual(3, graph.NodeCount);
 }
   \end{lstlisting}
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \begin{itemize}
     \item Return \texttt{Task}, never \texttt{void}. An \texttt{async void}
@@ -423,7 +422,7 @@ public async Task TestLoadAsyncMethodAsync()
       SEE bridges it with \texttt{UniTask.ToCoroutine} inside a
       \texttt{[UnityTest]}.
   \end{itemize}
-  \vspace{2ex}
+  \vspace{1ex}
 
   \hint{This is the one place where the compiler will not save you: a test that
   returns \texttt{void} but contains \texttt{await} is a green test that
@@ -491,7 +490,7 @@ internal abstract class TestUI
 \begin{frame}[fragile]{Unity-Specific Assertions: LogAssert}
   Unity treats a logged error as a test failure. When the code under test is
   \emph{supposed} to log an error, you have to announce it.
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEETests/TestDataPath.cs
@@ -501,7 +500,7 @@ LogAssert.Expect(LogType.Error,
 // The blunt instrument, used by SEE's UI tests.
 LogAssert.ignoreFailingMessages = true;
   \end{lstlisting}
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \begin{itemize}
     \item \texttt{LogAssert.Expect} both suppresses the message and
@@ -509,7 +508,7 @@ LogAssert.ignoreFailingMessages = true;
     \item \texttt{ignoreFailingMessages} suppresses everything and requires
       nothing. Convenient, and it hides regressions.
   \end{itemize}
-  \vspace{2ex}
+  \vspace{1ex}
 
   \hint{\texttt{LogAssert.Expect} does not reliably catch messages logged from
   another thread or from an awaited asynchronous call ---
