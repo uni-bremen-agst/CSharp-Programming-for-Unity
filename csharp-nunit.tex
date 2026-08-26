@@ -1030,7 +1030,7 @@ OnceBase
 public void TestMissingFile()
 {
   Graph graph = GraphReader.Load("does/not/exist.gxl");
-  Assert.AreEqual(0, graph.NodeCount);
+  Assert.That(graph.NodeCount, Is.EqualTo(0));
 }
   \end{lstlisting}
   \vspace{1ex}
@@ -1047,7 +1047,7 @@ public void TestMissingFile()
   LogAssert.Expect(LogType.Error, new Regex(".*does/not/exist.gxl.*"));
 
   Graph graph = GraphReader.Load("does/not/exist.gxl");
-  Assert.AreEqual(0, graph.NodeCount);
+  Assert.That(graph.NodeCount, Is.EqualTo(0));
 }
   \end{lstlisting}
   \begin{itemize}
@@ -1059,7 +1059,7 @@ public void TestMissingFile()
     \item \texttt{LogAssert} comes from \texttt{UnityEngine.TestTools}, not from
       NUnit.
   \end{itemize}
-  \vspace{2ex}
+  \vspace{1ex}
 
   \hint{Resist \texttt{LogAssert.ignoreFailingMessages = true}. It turns this
   test green, and every future error in the reader along with it.}
