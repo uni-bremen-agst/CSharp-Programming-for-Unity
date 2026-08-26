@@ -1067,7 +1067,6 @@ public IEnumerator TestMenuOption1()
 
 \endinput
 
-One thing I noticed while surveying and worked into the lifecycle slide as a caution rather than a claim: TestUI.SetUp ([UnitySetUp]) and TestMenu.SetUp ([SetUp], declared new) share a name across the hierarchy. NUnit identifies set-up methods by name, so that pattern is close to the case where a hidden base method silently stops running. Worth confirming against your Test Framework version if you want to state it definitively in the lecture.
 
 %%% Local Variables:
 %%% mode: latex
