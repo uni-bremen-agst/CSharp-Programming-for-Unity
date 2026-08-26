@@ -1,12 +1,661 @@
 %%% -*- coding: utf-8 -*-
 
-\lecture{async}{Asynchronous Computing in C\#}
+\lecture{Asynchronous Computing in C\#}{async}
 \section{Asynchronous Computing in C\#}
 
 \showtitlepage{Asynchronous Computing in C\#}
 
-%Asynchronous programming: async/await, Task, cancellation tokens
-% UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
-% async
-% Coroutine, IEnumerator
-% UniTask
+\begin{frame}{Why Asynchrony at All?}
+  A game renders a frame every 16 milliseconds. Everything your code does
+  happens inside that budget, on one thread. Read a file, wait for a web
+  request, parse a large graph --- and the frame is gone, together with the
+  next hundred.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \emph{Asynchronous} means: this operation may finish later, and the
+      caller need not stand still meanwhile.
+    \item \emph{Parallel} means: two things happen at the same instant, on two
+      cores.
+    \item The two are independent. Most asynchrony in Unity is
+      \emph{single-threaded}: the work is chopped into pieces spread over
+      frames, and no second thread is involved.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Unity's API is not thread-safe and may only be touched from the main
+  thread. That single rule explains most of the design decisions in this
+  lecture.}
+\end{frame}
+
+\begin{frame}{Three Mechanisms, One Problem}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{llll}
+      \hline
+      & \textbf{Coroutine} & \textbf{Task} & \textbf{UniTask}\\
+      \hline
+      Written as        & \texttt{IEnumerator}  & \texttt{async Task} & \texttt{async UniTask}\\
+      Driven by         & the player loop       & the thread pool     & the player loop\\
+      Returns a value   & no                    & yes                 & yes\\
+      Propagates errors & no                    & yes                 & yes\\
+      Allocates         & yes                   & yes                 & almost never\\
+      Needs play mode   & yes                   & no                  & no\\
+      Used in SEE       & 16 files              & never               & 110 files\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{2ex}
+
+  All three answer the same question --- \emph{how do I wait without
+  blocking?} --- and SEE has settled on the third. The other two are covered
+  because you will meet them in Unity's documentation, in tutorials, and in
+  the older corners of any code base.
+\end{frame}
+
+\begin{frame}[fragile]{Coroutines: A Method That Can Pause}
+  \framelabel{slide:coroutine}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Avatars/AvatarAdapter.cs
+public IEnumerator StartXRCoroutine()
+{
+  StartCoroutine(ManualXRControl.StartXRCoroutine());
+
+  // Wait until XR is initialized.
+  while (!ManualXRControl.IsInitialized())
+  {
+    yield return null;       // continue in the next frame
+  }
+  Debug.Log("XR is initialized.\n");
+  // ... now instantiate the VR prefabs ...
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A coroutine is started with \texttt{StartCoroutine(\ldots)} on a
+  \texttt{MonoBehaviour}. Unity then calls it back once per frame, and each
+  \texttt{yield return} decides when the next call happens.
+\end{frame}
+
+\begin{frame}[fragile]{What \texttt{yield return} Really Does}
+  The compiler turns the method body into a class implementing
+  \texttt{IEnumerator}: a state machine whose \texttt{MoveNext} runs up to the
+  next \texttt{yield} and remembers where it stopped.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+yield return null;                     // next frame
+yield return new WaitForSeconds(0.5f); // after 0.5 s of game time
+yield return new WaitForEndOfFrame();  // after rendering this frame
+yield return new WaitUntil(() => ready);
+yield return SomeOtherCoroutine();     // until that one finishes
+yield break;                           // stop here
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item There is no magic and no thread: Unity simply calls
+      \texttt{MoveNext} on your enumerator once per frame.
+    \item \texttt{IEnumerator} is the same interface \texttt{foreach} uses. A
+      coroutine is a sequence whose elements happen to be
+      \emph{wait instructions}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Where Coroutines Fall Short}
+  \begin{itemize}
+    \item \textbf{No result.} \texttt{IEnumerator} cannot return a value. You
+      write the result into a field and hope the caller reads it at the right
+      time.
+    \item \textbf{No exceptions.} A coroutine cannot be wrapped in
+      \texttt{try/catch} by its caller, and it may not \texttt{yield} inside a
+      \texttt{catch} block at all.
+    \item \textbf{Bound to a component.} It needs a \texttt{MonoBehaviour} to
+      run on, and it dies silently when that object is destroyed.
+    \item \textbf{Play mode only.} \texttt{StartCoroutine} does nothing in the
+      Editor, which puts every coroutine beyond the reach of an edit-mode test.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{A subtle one: deactivating the \emph{game object} stops its
+  coroutines, but merely setting \texttt{enabled = false} on the component
+  does not. The coroutine keeps running on a component you believe to be
+  switched off.}
+\end{frame}
+
+\begin{exerciseframe}{Coroutine, Async, or Neither?}
+  For each task, decide whether it wants a coroutine, an \texttt{async} method,
+  or no asynchrony at all --- and say why in one sentence.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item Fade a node's colour from red to green over two seconds.
+    \item Read a 40\,MB GXL file from disk and build a graph from it.
+    \item Compute the median of a list of floats.
+    \item Download metrics from the Axivion dashboard over HTTP.
+    \item Wait until the user has closed a dialogue, then continue an action.
+  \end{enumerate}
+  \vspace{1ex}
+
+  Which of them could be tested in an edit-mode test?
+\end{exerciseframe}
+
+\begin{solutionframe}{Coroutine, Async, or Neither?}
+  \begin{enumerate}
+    \item \textbf{Either.} It is per-frame animation, the home ground of
+      coroutines --- though SEE would use DOTween or \texttt{UniTask.Yield}.
+    \item \textbf{Async.} It returns a value and may fail; both are awkward in
+      a coroutine. SEE parses it on a background thread.
+    \item \textbf{Neither.} It is a pure computation that finishes in
+      microseconds. Asynchrony would only add overhead.
+    \item \textbf{Async.} Waiting for a server is the original use case, and
+      the answer is a value.
+    \item \textbf{Either}, and in SEE async: the dialogue's result is a value,
+      and \texttt{await} keeps the action's code in one readable piece.
+  \end{enumerate}
+  \vspace{1ex}
+
+  \hint{Only the async ones, 2 to 5, can be tested in edit mode --- and only
+  because they do not depend on the player loop. Anything built on
+  \texttt{StartCoroutine} forces the test into play mode.}
+\end{solutionframe}
+
+\begin{frame}[fragile]{\texttt{async} and \texttt{await}}
+  \framelabel{slide:asyncawait}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask<Graph> LoadAsync(DataPath path)
+{
+  Graph graph = await GraphReader.LoadAsync(path);  // suspends here
+  Debug.Log($"Loaded {graph.NodeCount} nodes.\n");  // resumes here
+  return graph;
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{async} is a promise about the method's \emph{body}: it may
+      contain \texttt{await}. It changes nothing about how the method is
+      called.
+    \item \texttt{await} splits the method in two. Everything after it becomes
+      a \emph{continuation} that runs once the awaited operation completes.
+    \item The return type is the contract: \texttt{UniTask<T>} or
+      \texttt{Task<T>} for a result, \texttt{UniTask} or \texttt{Task} for
+      none.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{By convention an asynchronous method's name ends in \texttt{Async}.
+  SEE follows this: \texttt{ProvideAsync}, \texttt{LoadAsync},
+  \texttt{DeleteTableAsync}.}
+\end{frame}
+
+\begin{frame}{\texttt{await} Is Not a Thread}
+  The single most common misconception: \texttt{await} does not start a
+  thread, and an \texttt{async} method does not run in the background.
+  \vspace{2ex}
+
+  \begin{itemize}
+    \item Like a coroutine, an \texttt{async} method is compiled into a state
+      machine. \texttt{await} means: register a continuation, return to the
+      caller now, and resume later.
+    \item \emph{Where} it resumes is decided by the awaited thing. In Unity,
+      an awaited \texttt{Task} resumes on the main thread, because Unity
+      installs a synchronisation context that marshals it back.
+    \item If you \texttt{await} something that never completes, nothing
+      happens --- forever, and silently. No deadlock, no error.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Concurrency without parallelism is the normal case here. Use
+  \texttt{await} to stop \emph{waiting} on the main thread; use a thread pool
+  to stop \emph{computing} on it. They solve different problems.}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{async void} Is a Trap}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+async void Load()             // nobody can await this
+{
+  throw new IOException();    // ... and nobody can catch it
+}
+
+try { Load(); }               // this catch never fires:
+catch (IOException) { ... }   // Load returned before throwing
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item An \texttt{async void} method returns to its caller at the first
+      \texttt{await}. There is no handle left to await, so the caller cannot
+      know when it ends or whether it failed.
+    \item Its exceptions do not travel to the caller. They surface as
+      unhandled exceptions somewhere else entirely, or vanish.
+    \item Use \texttt{async UniTask} instead. Where you genuinely want to
+      start something and not wait, say so explicitly with
+      \texttt{UniTaskVoid} and \texttt{Forget()}
+      (\slideref{slide:forget}).
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Why Is the Graph Never There?}
+  This compiles, runs, prints nothing, and reports no error. Explain what
+  happens and repair the signature.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private Graph graph;
+
+private async void LoadGraph(DataPath path)
+{
+  graph = await GraphReader.LoadAsync(path);
+}
+
+private void Start()
+{
+  LoadGraph(gxlPath);
+  Debug.Log($"{graph.NodeCount} nodes");   // NullReferenceException
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Why Is the Graph Never There?}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask LoadGraphAsync(DataPath path)
+{
+  graph = await GraphReader.LoadAsync(path);
+}
+
+private async UniTaskVoid Start()
+{
+  await LoadGraphAsync(gxlPath);
+  Debug.Log($"{graph.NodeCount} nodes");   // now it is there
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{LoadGraph} returns at its \texttt{await}, long before the
+      file is read. \texttt{Start} then reads a field that is still
+      \texttt{null}.
+    \item \texttt{async void} gave the caller nothing to wait for.
+      \texttt{async UniTask} does, and \texttt{await} restores the order the
+      code appears to have.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{The \texttt{NullReferenceException} is the lucky outcome. Had the
+  graph been loaded a moment earlier, the bug would surface once a month on a
+  slower machine.}
+\end{solutionframe}
+
+\begin{frame}[fragile]{Cancellation Is Cooperative}
+  Nothing can abort a running method from outside. Cancellation is a
+  \emph{request} that the operation itself has to honour.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+CancellationTokenSource source = new();   // the owner cancels
+CancellationToken token = source.Token;   // the operation observes
+
+// Somewhere in the operation, regularly:
+token.ThrowIfCancellationRequested();     // throws OperationCanceledException
+
+// Or, where throwing is inconvenient:
+if (token.IsCancellationRequested) { return; }
+
+source.Cancel();                          // from the other side
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The \emph{source} is the switch and belongs to whoever starts the
+      work; the \emph{token} is the wire and is passed down to everything the
+      work calls.
+    \item A token you never check is decoration. A token you never pass on
+      cancels only the top of the call chain.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Cancellation in SEE}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/GraphProviders/GXLGraphProvider.cs
+public override async UniTask<Graph> ProvideAsync
+    (Graph graph, AbstractSEECity city,
+     Action<float> changePercentage = null,
+     CancellationToken token = default)          // handed through
+{
+  return await GraphReader.LoadAsync(Path, ..., token);
+}
+
+// Assets/SEE/Game/City/SEECity.cs
+cancellationTokenSource.Cancel();                // stop the old load
+cancellationTokenSource = new CancellationTokenSource();
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Every graph provider takes a token and hands it on; the \texttt{GXLParser}
+  read loop checks it at every XML node. Reloading a city cancels the previous
+  load and installs a fresh source, because a cancelled source stays cancelled.
+  \vspace{1ex}
+
+  \hint{The default of that parameter is \texttt{CancellationToken.None} --- a
+  token that can never be cancelled. Convenient in tests, a silent loss of
+  cancellation everywhere else.}
+\end{frame}
+
+\begin{exerciseframe}{Make It Cancellable}
+  This runs to the end even after the user has closed the city. Add
+  cooperative cancellation, and explain who owns the source.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask AddMetricsAsync(Graph graph)
+{
+  foreach (Node node in graph.Nodes())
+  {
+    Metric metric = await dashboard.FetchAsync(node.ID);
+    node.SetFloat("Metric.Complexity", metric.Value);
+  }
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Make It Cancellable}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
+{
+  foreach (Node node in graph.Nodes())
+  {
+    token.ThrowIfCancellationRequested();          // between iterations
+    Metric metric = await dashboard.FetchAsync(node.ID, token);
+    node.SetFloat("Metric.Complexity", metric.Value);
+  }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Two changes, both necessary: check the token in the loop, and pass
+      it to everything awaited inside. Checking alone still waits out the
+      current request.
+    \item The \emph{source} belongs to the city, which cancels it when the
+      graph is reset. The method only ever sees the token.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Do not catch \texttt{OperationCanceledException} to log an error.
+  Cancellation is not a failure; it is the answer you asked for.}
+\end{solutionframe}
+
+\begin{frame}{UniTask: Why Not \texttt{Task}?}
+  \texttt{Task} was designed for servers: thread pools, work stealing, many
+  cores. A game has one main thread and a 16 ms budget, and it must not
+  allocate every frame.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{UniTask} is a \texttt{struct}, and its state machines come
+      from a pool, so awaiting allocates essentially nothing --- which matters
+      when it happens in \texttt{Update}.
+    \item It is driven by Unity's player loop directly, with no
+      synchronisation context in between, and lets you pick the timing
+      (\texttt{PlayerLoopTiming.Update}, \texttt{LateUpdate}, \ldots).
+    \item It knows Unity: you can await an \texttt{AsyncOperation}, a
+      \texttt{UnityWebRequest}, or a coroutine.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{SEE uses \texttt{com.cysharp.unitask} 2.5.10, referenced directly from
+  its GitHub repository in \texttt{Packages/manifest.json}. There is not a
+  single \texttt{async Task} method in \texttt{Assets/SEE}: production code
+  uses \texttt{UniTask} throughout.}
+\end{frame}
+
+\begin{frame}[fragile]{The UniTask Toolbox}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+await UniTask.Yield();                  // next frame
+await UniTask.NextFrame();
+await UniTask.Delay(500, cancellationToken: token);
+await UniTask.WaitUntil(() => ready, cancellationToken: token);
+
+await UniTask.WhenAll(taskA, taskB);    // both, concurrently
+(a, b) = await UniTask.WhenAll(taskA, taskB);   // and their results
+
+await UniTask.SwitchToThreadPool();     // leave the main thread
+await UniTask.SwitchToMainThread();     // and come back
+
+await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{WhenAll} is the cheapest performance win in the list: two downloads
+  awaited one after the other take the sum of their durations, awaited
+  together they take the maximum.
+\end{frame}
+
+\begin{frame}[fragile]{Leaving and Returning to the Main Thread}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXLParser.cs
+try
+{
+  await UniTask.SwitchToThreadPool();      // parsing is pure CPU work
+  while (await Reader.ReadAsync())
+  {
+    token.ThrowIfCancellationRequested();
+    // ... build nodes and edges ...
+  }
+}
+finally
+{
+  await UniTask.SwitchToMainThread();      // Unity API needs this thread
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Parsing a large GXL file is computation, not waiting, so \texttt{await}
+  alone would not help: it would keep the main thread busy just the same. The
+  parser therefore moves to a worker thread and must come back before anything
+  touches Unity.
+\end{frame}
+
+\begin{exerciseframe}{Where Does This Run?}
+  This throws \texttt{UnityException: get\_name can only be called from the
+  main thread}. Find the offending line and repair the method.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask<int> CountAsync(GameObject root, string file)
+{
+  await UniTask.SwitchToThreadPool();
+  int lines = File.ReadAllLines(file).Length;
+  Debug.Log($"{root.name}: {lines} lines");
+  return lines;
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Which of the three statements after the switch are allowed on a worker
+  thread?
+\end{exerciseframe}
+
+\begin{solutionframe}{Where Does This Run?}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask<int> CountAsync(GameObject root, string file)
+{
+  await UniTask.SwitchToThreadPool();
+  int lines = File.ReadAllLines(file).Length;   // fine: pure .NET
+  await UniTask.SwitchToMainThread();
+  Debug.Log($"{root.name}: {lines} lines");     // needs the main thread
+  return lines;
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{File.ReadAllLines} is ordinary .NET and belongs on the
+      worker thread --- that is the point of the switch.
+    \item \texttt{root.name} is Unity API, hence main thread only. It is the
+      property access, not \texttt{Debug.Log}, that throws.
+    \item Without the second switch the caller resumes on the worker thread
+      too: UniTask continues on whichever thread completed the operation.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Doing the switch in a \texttt{finally} block, as \texttt{GXLParser}
+  does, is the safer habit: an exception must not leave the rest of the
+  program on a worker thread.}
+\end{solutionframe}
+
+\begin{frame}[fragile]{Fire and Forget, on Purpose}
+  \framelabel{slide:forget}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Controls/Actions/DeleteAction.cs
+ShowDeletionNotificationAsync(message).Forget();
+
+private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
+{
+  ...
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{UniTaskVoid} is the honest \texttt{async void}: it cannot be
+      awaited either, but it says so in the signature, and \texttt{Forget()}
+      makes the decision visible at the call site.
+    \item \texttt{Forget()} also routes exceptions to UniTask's handler
+      instead of dropping them, so a failure still appears in the console.
+    \item Reach for it only where nobody could sensibly wait --- a
+      notification, a fading highlight. Never for something whose result
+      matters.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{From Coroutine to UniTask}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{ll}
+      \hline
+      \textbf{Coroutine} & \textbf{UniTask}\\
+      \hline
+      \texttt{yield return null}              & \texttt{await UniTask.Yield()}\\
+      \texttt{yield return new WaitForSeconds(t)} & \texttt{await UniTask.Delay(ms)}\\
+      \texttt{yield return new WaitUntil(p)}   & \texttt{await UniTask.WaitUntil(p)}\\
+      \texttt{yield return other}              & \texttt{await OtherAsync()}\\
+      \texttt{yield break}                     & \texttt{return}\\
+      \texttt{StartCoroutine(C())}             & \texttt{CAsync().Forget()}\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{2ex}
+
+  The rewrite is mechanical, and it buys three things a coroutine cannot
+  offer: a return value, exceptions that reach the caller, and a
+  \texttt{CancellationToken}. It also frees the code from needing a
+  \texttt{MonoBehaviour} to live on.
+\end{frame}
+
+\begin{frame}[fragile]{Asynchronous Code in Tests}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEETests/TestGraphIO.cs: NUnit awaits a Task directly
+[Test, Sequential]
+public async Task TestGraphWriter([Values(true, false)] bool compress)
+{ ... }
+
+// Assets/SEETests/TestDataPath.cs: UniTask bridged into [UnityTest]
+[UnityTest]
+public IEnumerator LoadFromFile() =>
+  UniTask.ToCoroutine(async () =>
+  {
+    using Stream stream = await dataPath.LoadAsync();
+    Assert.That(Read(stream), Is.EqualTo(content));
+  });
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{UniTask.ToCoroutine} wraps an asynchronous lambda into the
+  \texttt{IEnumerator} that \texttt{[UnityTest]} expects. Note that both of
+  these live in the \emph{edit-mode} assembly: neither needs the player loop.
+\end{frame}
+
+\begin{exerciseframe}{From Coroutine to UniTask}
+  Rewrite this coroutine as an asynchronous method that can be cancelled and
+  reports whether the server answered.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private bool succeeded;
+
+private IEnumerator PollServer()
+{
+  for (int attempt = 0; attempt < 10; attempt++)
+  {
+    yield return new WaitForSeconds(1);
+    if (Server.IsReachable())
+    {
+      succeeded = true;
+      yield break;
+    }
+  }
+  succeeded = false;
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{From Coroutine to UniTask}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask<bool> PollServerAsync(CancellationToken token)
+{
+  for (int attempt = 0; attempt < 10; attempt++)
+  {
+    await UniTask.Delay(1000, cancellationToken: token);
+    if (Server.IsReachable())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The \texttt{succeeded} field disappears: the answer is the return value, and
+  the caller cannot read it too early any more. \texttt{yield break} becomes
+  \texttt{return true}, and the loop needs no \texttt{MonoBehaviour}, so this
+  is testable in edit mode.
+  \vspace{1ex}
+
+  \hint{\texttt{WaitForSeconds} measures scaled game time and pauses with the
+  game; \texttt{UniTask.Delay} measures real time unless asked for
+  \texttt{DelayType.DeltaTime}.}
+\end{solutionframe}
+
+\begin{frame}{Conventions in SEE}
+  \begin{itemize}
+    \item \texttt{UniTask} everywhere, \texttt{Task} nowhere. Production code
+      contains no \texttt{async Task}; tests may use it because NUnit awaits
+      it directly.
+    \item Asynchronous methods end in \texttt{Async} and take
+      \texttt{CancellationToken token = default} as their last parameter,
+      passed on to everything they await.
+    \item \texttt{async void} never; \texttt{UniTaskVoid} plus
+      \texttt{Forget()} where fire-and-forget is really meant.
+    \item Long computations go to the thread pool and return to the main
+      thread in a \texttt{finally} block before touching Unity.
+    \item New code uses coroutines only where something genuinely belongs to
+      the player loop and no result is needed.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{If you are unsure whether to await or to forget, ask who would notice
+  the failure. If nobody would, that is not a reason to forget --- it is a
+  reason to await.}
+\end{frame}
+
+\endinput
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
