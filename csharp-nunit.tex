@@ -380,9 +380,19 @@ internal class TestIncrementalReflexion : TestReflexionAnalysis
 [TestCase(null, "")]
 public void TestBasename(string path, string expected)
 {
-  Assert.AreEqual(expected, Filenames.Basename(path));
+  Assert.That(Filenames.Basename(path, '/'), Is.EqualTo(expected));
 }
+  \end{lstlisting}
+  \vspace{1ex}
 
+  The arguments of \texttt{[TestCase]} become the arguments of the method, and
+  each attribute yields one test. A failing case is named after its inputs, so
+  the report tells you \texttt{TestBasename("MyDir/", "")} rather than merely
+  \texttt{TestBasename}.
+\end{frame}
+
+\begin{frame}[fragile]{Parameterized Tests: Values and Sources}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEETests/TestGraphIO.cs: the values live at the parameter
 [Test, Sequential]
 public async Task TestGraphWriter([Values(true, false)] bool compress)
@@ -392,6 +402,12 @@ public async Task TestGraphWriter([Values(true, false)] bool compress)
 [Test, TestCaseSource(nameof(AllTypeSupplier))]
 public void TestEquality(AbstractActionStateType type) { ... }
   \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{[Values]} is the compact form when a parameter has a handful of
+  literal values. \texttt{[TestCaseSource]} names a method supplying the cases,
+  which is the only option when they are not known until run time --- here, one
+  case per action state type that SEE happens to define.
   \vspace{1ex}
 
   \hint{With two \texttt{[Values]} parameters, \texttt{[Combinatorial]} (the
@@ -467,7 +483,6 @@ internal abstract class TestUI
   [UnitySetUp]
   public IEnumerator SetUp()
   {
-    LogAssert.ignoreFailingMessages = true;
     User.UserSettings.Instance.InputType = PlayerInputType.DesktopPlayer;
     yield return new EnterPlayMode();
   }
@@ -479,12 +494,10 @@ internal abstract class TestUI
   }
 }
   \end{lstlisting}
-  \vspace{1ex}
 
-  \hint{\texttt{EnterPlayMode} triggers a domain reload, which is why a
-  play-mode test costs seconds rather than milliseconds. Set-up and tear-down
-  methods driven by the framework must be \texttt{public}; a private one is
-  silently never called.}
+  \hint{\texttt{EnterPlayMode} forces a domain reload, which is why a play-mode
+  test costs seconds rather than milliseconds --- and why play mode is entered
+  once in a base class rather than in every test.}
 \end{frame}
 
 \begin{frame}[fragile]{Unity-Specific Assertions: LogAssert}
@@ -572,17 +585,35 @@ public IEnumerator LoadFromForeignServer() =>
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Skipping in SEE}
+\begin{frame}[fragile]{Skipping in SEE: Static Decisions}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Not implemented yet, and everyone should be reminded of it.
 [Ignore("GitEvolutionGraphProvider is not implemented yet.")]
 [UnityTest]
 public IEnumerator TestGitEvolutionProvider() { ... }
 
-// A whole fixture parked with a ticket number.
+// A whole fixture parked while a ticket is open.
 [Explicit("Reflexion tests currently don't work, tracked in #481")]
 internal class TestReflexionAnalysis { ... }
+  \end{lstlisting}
+  \vspace{1ex}
 
+  \begin{itemize}
+    \item \texttt{[Ignore]} never runs and is reported as skipped, reason
+      included. It nags, which is the point.
+    \item \texttt{[Explicit]} runs only when you select it by name or filter.
+      A normal run passes over it in silence.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{The \texttt{[Explicit]} above is history: it was removed once \#481 was
+  closed, and SEE currently has no explicit test at all. Both attributes are
+  meant to be temporary, and a repository is the wrong place to keep a
+  to-do list.}
+\end{frame}
+
+\begin{frame}[fragile]{Skipping in SEE: Run-Time Decisions}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Needs a full clone; CI checks out with fetch-depth 1.
 [Category("SkipOnCI")]
 public void TestVcsMetrics() { ... }
@@ -593,6 +624,11 @@ if (string.IsNullOrWhiteSpace(repo.AccessToken))
   Assert.Inconclusive("No access token provided. ...");
 }
   \end{lstlisting}
+  \vspace{1ex}
+
+  A category is a label the runner filters on: SEE's CI passes
+  \texttt{-{}-testCategory "!SkipOnCI"}, so the same test suite behaves
+  differently there than on your machine.
   \vspace{1ex}
 
   \hint{\texttt{Inconclusive} is the honest verdict here: the test neither
@@ -698,6 +734,27 @@ protected class LoadSceneAttribute : NUnitAttribute, IOuterUnityTestAction
   IEnumerator IOuterUnityTestAction.AfterTest(ITest test) { yield return null; }
 }
   \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Writing Your Own Attribute: Using It}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEEPlayModeTests/TestSimpleMenu.cs
+[UnityTest]
+[LoadScene]
+public IEnumerator TestMenuOption1()
+{
+  yield return new WaitForSeconds(TimeUntilMenuIsSetup);
+  PressButton(MenuTitle, OptionOne);
+  yield return new WaitForEndOfFrame();
+  Assert.That(selection, Is.EqualTo(1), $"Pressing {OptionOne} must select option 1.");
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{BeforeTest} runs before the test body and \texttt{AfterTest} after
+  it, both as coroutines, so an attribute can do anything a play-mode test can
+  --- wait frames included. The default argument makes \texttt{[LoadScene]}
+  load the \texttt{Empty} scene, \texttt{[LoadScene("SEEStart")]} another one.
   \vspace{1ex}
 
   \hint{\texttt{[LoadScene]} then reads like a built-in attribute. This is the
@@ -870,7 +927,7 @@ internal class TestSpinner : TestUI
     GameObject cube = new GameObject("Cube");
     Spinner spinner = cube.AddComponent<Spinner>();
 
-    Assert.AreNotEqual(Quaternion.identity, cube.transform.rotation);
+    Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
   }
 }
   \end{lstlisting}
@@ -887,9 +944,8 @@ public IEnumerator TestRotation()        // 2: must be public
 {
   GameObject cube = new GameObject("Cube");
   Spinner spinner = cube.AddComponent<Spinner>();
-
   yield return null;                     // 3: let Update run once
-  Assert.AreNotEqual(Quaternion.identity, cube.transform.rotation);
+  Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
 }
   \end{lstlisting}
   \begin{itemize}
@@ -900,11 +956,10 @@ public IEnumerator TestRotation()        // 2: must be public
     \item Without a \texttt{yield}, even \texttt{[UnityTest]} asserts on the
       very frame in which the component was added.
   \end{itemize}
-  \vspace{2ex}
+  \vspace{1ex}
 
   \hint{A fourth issue lurks: \texttt{cube} is never destroyed and leaks into
-  the next test. That is what \texttt{[UnityTearDown]} in \texttt{TestUI} and
-  \texttt{Destroyer.Destroy} in \texttt{TestMenu} are for.}
+  the next test. That is what \texttt{[UnityTearDown]} is for.}
 \end{solutionframe}
 
 \begin{exerciseframe}{Predict the Lifecycle}
