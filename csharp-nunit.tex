@@ -426,7 +426,7 @@ public void TestEquality(AbstractActionStateType type) { ... }
 public async Task TestLoadAsyncMethodAsync()
 {
   Graph graph = await LoadGraphAsync(path);
-  Assert.AreEqual(3, graph.NodeCount);
+  Assert.That(graph.NodeCount, Is.EqualTo(3));
 }
   \end{lstlisting}
   \vspace{0.5ex}
