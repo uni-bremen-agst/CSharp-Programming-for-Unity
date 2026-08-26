@@ -717,7 +717,7 @@ Unity -runTests -batchmode -projectPath . \
   or point \texttt{-projectPath} at a separate clone.}
 \end{frame}
 
-\begin{frame}[fragile]{Writing Your Own Attribute}
+\begin{frame}[fragile]{Writing Your Own Attribute: Declaring it}
   The framework is extensible: an attribute implementing
   \texttt{IOuterUnityTestAction} may run a coroutine around a test. SEE uses
   that to load a scene before each UI test.
@@ -753,7 +753,8 @@ public IEnumerator TestMenuOption1()
   yield return new WaitForSeconds(TimeUntilMenuIsSetup);
   PressButton(MenuTitle, OptionOne);
   yield return new WaitForEndOfFrame();
-  Assert.That(selection, Is.EqualTo(1), $"Pressing {OptionOne} must select option 1.");
+  Assert.That(selection, Is.EqualTo(1),
+              $"Pressing {OptionOne} must select option 1.");
 }
   \end{lstlisting}
   \vspace{1ex}
@@ -772,27 +773,27 @@ public IEnumerator TestMenuOption1()
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
     \item One fixture per class under test, named \texttt{Test} plus the name of
-      that class: \texttt{TestGraph}, \texttt{TestUnionFind},
-      \texttt{TestRectanglePacker}.
+      that class: \texttt{TestGraph} for \texttt{Graph}, \texttt{TestUnionFind}
+      for \texttt{UnionFind}.
     \item The fixture lives in the \emph{same namespace} as the class it tests,
       which is why \texttt{TestGraph} sits in \texttt{SEE.DataModel.DG}. That
       grants it access to \texttt{internal} members without any trickery.
     \item Fixtures are \texttt{internal} unless a derived fixture in another
       namespace needs them.
     \item Shared helpers go into an abstract base fixture ---
-      \texttt{TestGraphBase}, \texttt{TestUI}, \texttt{TestMenu} --- not into
+      e.g., \texttt{TestGraphBase}, \texttt{TestUI}, \texttt{TestMenu} --- not into
       static utility classes.
     \item Test methods carry the same doc comments as production code.
   \end{itemize}
   \vspace{2ex}
 
-  \hint{Tests are the one place where duplication is tolerable and cleverness is
+  \hint{Tests are the one place where duplication may be tolerable and cleverness
   not. A test that needs a comment to explain what it asserts is asserting too
   much.}
 \end{frame}
 
 \begin{exerciseframe}{Edit Mode or Play Mode?}
-  For each of the following, decide which assembly it belongs to and why.
+  For each of the following, decide which assembly (edit or play) it belongs to and why.
   \vspace{1ex}
 
   \begin{enumerate}
