@@ -299,7 +299,7 @@ public void DeleteRepository() { ... }
     \item Set-up runs from the most basic class down to the most derived one,
       tear-down in the opposite direction.
     \item Tear-down runs even when the test failed, which is what makes it the
-      right place for deleting temporary files.
+      right place for deleting temporarily allocated resources, such as files.
     \item Tests within a fixture must not depend on each other; NUnit gives no
       guarantee on their order unless you write \texttt{[Order(n)]}.
   \end{itemize}
