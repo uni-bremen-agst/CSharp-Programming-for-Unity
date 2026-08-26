@@ -143,9 +143,9 @@ namespace SEE.Utils
 \end{frame}
 
 \begin{frame}[fragile]{Assertions: Two Models}
-  NUnit offers a classic and a constraint-based assertion model. Both are in use
-  in SEE, the classic one about 900 times, the constraint one about 400 times.
-  \vspace{1ex}
+  NUnit offers a classic and a newer constraint-based assertion model. \\
+  The latter is used in SEE.
+  \vspace{0.5ex}
 
   \begin{columns}[T]
     \column{0.47\textwidth}
@@ -165,21 +165,93 @@ Assert.That(node.Parent, Is.Null);
 Assert.That(a, Is.SameAs(b));
       \end{lstlisting}
   \end{columns}
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \begin{itemize}
     \item \texttt{AreEqual} takes \emph{expected first}, \texttt{actual}
       second. Swapping them does not change the verdict, only the error message,
       which then lies to you.
-    \item The constraint model composes: \texttt{Is.Not.Null},
+    \item The constraint model composes:\\ \texttt{Is.Not.Null},
       \texttt{Is.EqualTo(4).Within(0.01)}, \texttt{Is.EquivalentTo(expected)}.
     \item Every assertion takes an optional message as its last argument. Use it.
   \end{itemize}
   \vspace{2ex}
 
-  \hint{Prefer \texttt{Assert.That} in new code. It reads as a sentence, and
+  \hint{Use \texttt{Assert.That}. It reads as a sentence, and
   \texttt{Is.EquivalentTo} for collections gives you a diff instead of
   \texttt{Expected: True, But was: False}.}
+\end{frame}
+
+\begin{frame}[fragile]{The Message Is Part of the Assertion}
+  Every \texttt{Assert.That} takes an optional message as its last argument.
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Assert.That(node.IsRoot(), Is.True, $"{node.ID} must be a root.");
+
+Assert.That(graph.NodeCount, Is.EqualTo(3),
+            $"Wrong number of nodes in {graph.Name}.");
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Without it, a failing \texttt{Is.True} reports no more than\\
+  \texttt{Expected:~True / But was:~False} --- \emph{that} the test failed, not
+  \emph{which} of the many nodes in a test loop broke it. Where the constraint
+  already prints the interesting values, as \texttt{Is.EqualTo} does, a message
+  is a bonus; for \texttt{Is.True} and \texttt{Is.False} it is essential,
+  because a \texttt{bool} carries no trace of where it came from.
+  \vspace{1ex}
+
+  \hint{The message is an ordinary argument, so it is built on \emph{every}
+  call, not only on failures. Keep it cheap: an interpolated string that counts
+  the rows of a query pays for that in every passing test, too.}
+\end{frame}
+
+\begin{frame}[fragile]{Equal, Same, or Equivalent?}
+  \begin{center}
+    \begin{tabular}{lll}
+      \hline
+      \textbf{Constraint} & \textbf{Asks} & \textbf{Order}\\
+      \hline
+      \texttt{Is.EqualTo} & Are they equal? (\texttt{Equals}) & matters\\
+      \texttt{Is.SameAs} & Are they the same object? & ---\\
+      \texttt{Is.EquivalentTo} & Same elements, any order? & ignored\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{2ex}
+
+  \begin{itemize}
+    \item \texttt{Is.EqualTo} calls \texttt{Equals} --- never \texttt{==}, so a
+      user-defined \texttt{operator==} is ignored. Numbers are compared across
+      types (\texttt{Is.EqualTo(1)} accepts \texttt{1.0f}), and floating-point
+      comparisons take a tolerance: \texttt{Is.EqualTo(3.14).Within(0.01)}.
+    \item Two collections given to \texttt{Is.EqualTo} are compared element by
+      element \emph{in order}, so a \texttt{List} can equal an array.
+    \item \texttt{Is.SameAs} is reference identity. It answers ``this very
+      object'', not ``an object that looks like it''.
+    \item \texttt{Is.EquivalentTo} is for collections only and counts
+      duplicates: \texttt{\{1, 1, 2\}} is \emph{not} equivalent to
+      \texttt{\{1, 2\}}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Equal, Same, or Equivalent? --- Why It Matters}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<string> a = new() { "x", "y" };
+List<string> b = new() { "x", "y" };
+List<string> c = new() { "y", "x" };
+
+Assert.That(b, Is.EqualTo(a));      // passes: same elements, same order
+Assert.That(b, Is.SameAs(a));       // FAILS: two distinct objects
+Assert.That(c, Is.EqualTo(a));      // FAILS: order differs
+Assert.That(c, Is.EquivalentTo(a)); // passes: order ignored
+  \end{lstlisting}
+
+  Choosing the weaker constraint is the more common mistake: the test still
+  passes, it just stops proving what you meant. Asserting that a node belongs
+  to \emph{this} graph is a question about identity, hence
+  \texttt{Is.SameAs}. And in SEE, \texttt{Graph.Equals} compares only the name
+  and the path of a graph, never its content, so \texttt{Is.EqualTo} on two
+  graphs passes far too easily.
 \end{frame}
 
 \begin{frame}[fragile]{Asserting on Collections and Exceptions}
