@@ -115,6 +115,45 @@
   because edit-mode tests are hundreds of times faster.}
 \end{frame}
 
+\begin{exerciseframe}{Edit Mode or Play Mode?}
+  For each of the following, decide which assembly (edit or play) it belongs to and why.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item A test that a treemap layout assigns non-overlapping rectangles.
+    \item A test that clicking a menu entry sets the selection.
+    \item A test that a GXL file written and read back yields an equal graph.
+    \item A test that a DOTween animation has reached its target after one
+      second.
+    \item A test that \texttt{Filenames.Basename("a/b.cs")} is \texttt{"b.cs"}.
+  \end{enumerate}
+  \vspace{1ex}
+
+  The table on \slideref{slide:editvsplay} has the criterion. For the play-mode
+  ones: what would go wrong if you wrote them as \texttt{[Test]} in
+  \texttt{SEETests} anyway?
+\end{exerciseframe}
+
+\begin{solutionframe}{Edit Mode or Play Mode?}
+  \begin{enumerate}
+    \item Edit mode. Pure geometry, no frames.
+    \item Play mode. The button needs an event system and a rendered canvas.
+    \item Edit mode. File I/O needs no player loop.
+    \item Play mode. ``After one second'' only means something while time runs.
+    \item Edit mode. A pure function.
+  \end{enumerate}
+  \vspace{1ex}
+
+  Written as an edit-mode \texttt{[Test]}, cases 2 and 4 do not fail
+  honestly --- they fail confusingly. Nothing advances the tween and no
+  \texttt{Update} ever runs, so the assertion sees the initial state and reports
+  a wrong value, as if the production code were broken.
+  \vspace{2ex}
+
+  \hint{Four out of five belong in edit mode. That ratio is not an accident;
+  it is what a testable architecture looks like.}
+\end{solutionframe}
+
 \begin{frame}[fragile]{An Edit-Mode Test}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEETests/TestFilenames.cs
@@ -367,6 +406,54 @@ internal class TestIncrementalReflexion : TestReflexionAnalysis
   question of overriding never comes up.}
 \end{frame}
 
+\begin{exerciseframe}{Predict the Lifecycle}
+  Two tests run in \texttt{Derived}. In which order are the six methods called?
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+internal abstract class Base
+{
+  [OneTimeSetUp] public void OnceBase()  => Log("OnceBase");
+  [SetUp]        public void EachBase()  => Log("EachBase");
+  [TearDown]     public void AfterBase() => Log("AfterBase");
+}
+
+internal class Derived : Base
+{
+  [SetUp]    public void EachDerived()  => Log("EachDerived");
+  [TearDown] public void AfterDerived() => Log("AfterDerived");
+
+  [Test] public void First()  => Log("First");
+  [Test] public void Second() => Log("Second");
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  And: may you rely on \texttt{First} running before \texttt{Second}?
+\end{exerciseframe}
+
+\begin{solutionframe}{Predict the Lifecycle}
+  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
+OnceBase
+  EachBase, EachDerived, First,  AfterDerived, AfterBase
+  EachBase, EachDerived, Second, AfterDerived, AfterBase
+  \end{lstlisting}
+  \begin{itemize}
+    \item Set-up descends the hierarchy, tear-down climbs it, so a derived
+      fixture can build on what its base prepared and tear down its own
+      additions first.
+    \item \texttt{OnceBase} runs once for the whole fixture, not once per test.
+    \item No, you may not rely on the order of \texttt{First} and
+      \texttt{Second}. NUnit currently sorts alphabetically, but that is not a
+      promise --- if the order matters, the tests share state and are broken.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Everything a test needs must be built in \texttt{[SetUp]} and dropped in
+  \texttt{[TearDown]}. That is the price of being allowed to run tests in
+  isolation, in parallel, or one alone.}
+\end{solutionframe}
+
 \begin{frame}[fragile]{Parameterized Tests}
   \framelabel{slide:parameterized}
   One test method, many cases. Each case is reported separately, so you see
@@ -414,6 +501,60 @@ public void TestEquality(AbstractActionStateType type) { ... }
   default) runs every pair, \texttt{[Sequential]} only pairs them up
   position by position. For 5 and 4 values that is 20 tests versus 5.}
 \end{frame}
+
+\begin{exerciseframe}{From Three Tests to One}
+  Fold these into a single parameterized test.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[Test]
+public void TestBasenameOfFile()
+{
+  Assert.That(Filenames.Basename("Assets/MyFile.cs", '/'),
+              Is.EqualTo("MyFile.cs"));
+}
+
+[Test]
+public void TestBasenameOfDirectory()
+{
+  Assert.That(Filenames.Basename("MyDir/", '/'), Is.EqualTo(""));
+}
+
+[Test]
+public void TestBasenameOfNull()
+{
+  Assert.That(Filenames.Basename(null, '/'), Is.EqualTo(""));
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  How many tests does the Test Runner show afterwards?
+\end{exerciseframe}
+
+\begin{solutionframe}{From Three Tests to One}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[TestCase("Assets/MyFile.cs", "MyFile.cs")]
+[TestCase("MyDir/", "")]
+[TestCase(null, "")]
+public void TestBasename(string path, string expected)
+{
+  Assert.That(Filenames.Basename(path, '/'), Is.EqualTo(expected),
+              $"Basename of {path}");
+}
+  \end{lstlisting}
+  \begin{itemize}
+    \item Still three tests in the runner, one per \texttt{[TestCase]}, each
+      named by its arguments. You lose nothing in reporting and gain a place to
+      add a fourth case in one line.
+    \item \texttt{[Test]} is dropped: \texttt{[TestCase]} already marks the
+      method as a test.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{This is exactly \texttt{TestFilenames} in SEE, where three parameterized
+  methods carry 23 cases between them. Adding a case must be cheaper than not
+  adding it.}
+\end{solutionframe}
 
 \begin{frame}[fragile]{Asynchronous Tests}
   An edit-mode test may be \texttt{async} and return \texttt{Task}. NUnit awaits
@@ -500,6 +641,55 @@ internal abstract class TestUI
   once in a base class rather than in every test.}
 \end{frame}
 
+\begin{exerciseframe}{Repair a Play-Mode Test}
+  This test is red although the production code is correct. Find all three
+  mistakes.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+internal class TestSpinner : TestUI
+{
+  [Test]
+  private void TestRotation()
+  {
+    GameObject cube = new GameObject("Cube");
+    Spinner spinner = cube.AddComponent<Spinner>();
+
+    Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
+  }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{Spinner} is a \texttt{MonoBehaviour} rotating its transform a little
+  in every \texttt{Update}.
+\end{exerciseframe}
+
+\begin{solutionframe}{Repair a Play-Mode Test}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[UnityTest]                              // 1: needs frames
+public IEnumerator TestRotation()        // 2: must be public
+{
+  GameObject cube = new GameObject("Cube");
+  Spinner spinner = cube.AddComponent<Spinner>();
+  yield return null;                     // 3: let Update run once
+  Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
+}
+  \end{lstlisting}
+  \begin{itemize}
+    \item \texttt{[Test]} never advances a frame, so \texttt{Update} is never
+      called and the rotation stays at the identity.
+    \item A \texttt{private} test method is not discovered at all: the test does
+      not fail, it silently does not exist.
+    \item Without a \texttt{yield}, even \texttt{[UnityTest]} asserts on the
+      very frame in which the component was added.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{A fourth issue lurks: \texttt{cube} is never destroyed and leaks into
+  the next test. That is what \texttt{[UnityTearDown]} is for.}
+\end{solutionframe}
+
 \begin{frame}[fragile]{Unity-Specific Assertions: LogAssert}
   Unity treats a logged error as a test failure. When the code under test is
   \emph{supposed} to log an error, you have to announce it.
@@ -527,6 +717,51 @@ LogAssert.ignoreFailingMessages = true;
   another thread or from an awaited asynchronous call ---
   \texttt{TestJacocoImporter} says so in a comment and falls back to ignoring.}
 \end{frame}
+
+\begin{exerciseframe}{An Expected Error}
+  \texttt{GraphReader.Load} logs an error and returns an empty graph when the
+  file does not exist. Write the test.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[Test]
+public void TestMissingFile()
+{
+  Graph graph = GraphReader.Load("does/not/exist.gxl");
+  Assert.That(graph.NodeCount, Is.EqualTo(0));
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  As written the test fails, even though the production code behaves exactly as
+  specified. Why, and what do you add?
+\end{exerciseframe}
+
+\begin{solutionframe}{An Expected Error}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[Test]
+public void TestMissingFile()
+{
+  LogAssert.Expect(LogType.Error, new Regex(".*does/not/exist.gxl.*"));
+
+  Graph graph = GraphReader.Load("does/not/exist.gxl");
+  Assert.That(graph.NodeCount, Is.EqualTo(0));
+}
+  \end{lstlisting}
+  \begin{itemize}
+    \item Unity fails any test during which an error is logged, hence the
+      correct behaviour of the reader is what breaks the test.
+    \item \texttt{LogAssert.Expect} is an assertion in both directions: it
+      swallows that one message, and it fails the test if the message does not
+      appear. The specified behaviour is now fully covered.
+    \item \texttt{LogAssert} comes from \texttt{UnityEngine.TestTools}, not from
+      NUnit.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Resist \texttt{LogAssert.ignoreFailingMessages = true}. It turns this
+  test green, and every future error in the reader along with it.}
+\end{solutionframe}
 
 \begin{frame}[fragile]{[UnityTest] outside Play Mode}
   \texttt{[UnityTest]} is not the same as ``play-mode test''. It also works in
@@ -666,6 +901,44 @@ if (string.IsNullOrWhiteSpace(repo.AccessToken))
   easiest way to lose a test for good.}
 \end{frame}
 
+\begin{exerciseframe}{Which Skip Mechanism?}
+  Pick one of \texttt{[Ignore]}, \texttt{[Explicit]}, \texttt{[Category]},
+  \texttt{Assert.Ignore} and \texttt{Assert.Inconclusive} for each situation,
+  and justify it in one sentence.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item The test needs a GitHub access token that only two developers have.
+    \item The test drives a stress run over 10\,000 graphs and takes 20 minutes.
+    \item The feature under test is not implemented yet; the test is written and
+      red.
+    \item The test needs a full \texttt{git} clone, which the CI runner cannot
+      make.
+    \item The test needs a codec that is missing on Linux only.
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Which Skip Mechanism?}
+  \begin{enumerate}
+    \item \texttt{Assert.Inconclusive} in \texttt{[SetUp]}: only at run time can
+      you see whether the token is there, and the test truly has no verdict.
+    \item \texttt{[Explicit]}: it should never run by accident, but a developer
+      must be able to select and run it deliberately.
+    \item \texttt{[Ignore("...")]} with a reason: it must keep nagging in every
+      report until someone implements the feature.
+    \item \texttt{[Category("SkipOnCI")]}: the exclusion belongs to the runner
+      that cannot satisfy it, not to the test.
+    \item \texttt{Assert.Ignore} guarded by a platform check --- the condition
+      is a property of the machine, known only at run time.
+  \end{enumerate}
+  \vspace{2ex}
+
+  \hint{All five occur in SEE. Cases 1, 3, 4 and 5 are
+  \texttt{TestGitSEE}, \texttt{TestGitGraphProvider}, \texttt{TestGraphProviders}
+  and \texttt{TestGraphIO} respectively, and case 2 is\\
+  \texttt{TestReflexionAnalysisStress}.}
+\end{solutionframe}
+
 \begin{frame}{Running Tests in the Editor}
   \textbf{Window \(\rightarrow\) General \(\rightarrow\) Test Runner}
   \vspace{1ex}
@@ -791,279 +1064,6 @@ public IEnumerator TestMenuOption1()
   not. A test that needs a comment to explain what it asserts is asserting too
   much.}
 \end{frame}
-
-\begin{exerciseframe}{Edit Mode or Play Mode?}
-  For each of the following, decide which assembly (edit or play) it belongs to and why.
-  \vspace{1ex}
-
-  \begin{enumerate}
-    \item A test that a treemap layout assigns non-overlapping rectangles.
-    \item A test that clicking a menu entry sets the selection.
-    \item A test that a GXL file written and read back yields an equal graph.
-    \item A test that a DOTween animation has reached its target after one
-      second.
-    \item A test that \texttt{Filenames.Basename("a/b.cs")} is \texttt{"b.cs"}.
-  \end{enumerate}
-  \vspace{1ex}
-
-  The table on \slideref{slide:editvsplay} has the criterion. For the play-mode
-  ones: what would go wrong if you wrote them as \texttt{[Test]} in
-  \texttt{SEETests} anyway?
-\end{exerciseframe}
-
-\begin{solutionframe}{Edit Mode or Play Mode?}
-  \begin{enumerate}
-    \item Edit mode. Pure geometry, no frames.
-    \item Play mode. The button needs an event system and a rendered canvas.
-    \item Edit mode. File I/O needs no player loop.
-    \item Play mode. ``After one second'' only means something while time runs.
-    \item Edit mode. A pure function.
-  \end{enumerate}
-  \vspace{1ex}
-
-  Written as an edit-mode \texttt{[Test]}, cases 2 and 4 do not fail
-  honestly --- they fail confusingly. Nothing advances the tween and no
-  \texttt{Update} ever runs, so the assertion sees the initial state and reports
-  a wrong value, as if the production code were broken.
-  \vspace{2ex}
-
-  \hint{Four out of five belong in edit mode. That ratio is not an accident;
-  it is what a testable architecture looks like.}
-\end{solutionframe}
-
-\begin{exerciseframe}{From Three Tests to One}
-  Fold these into a single parameterized test.
-  \vspace{1ex}
-
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-[Test]
-public void TestBasenameOfFile()
-{
-  Assert.That(Filenames.Basename("Assets/MyFile.cs", '/'),
-              Is.EqualTo("MyFile.cs"));
-}
-
-[Test]
-public void TestBasenameOfDirectory()
-{
-  Assert.That(Filenames.Basename("MyDir/", '/'), Is.EqualTo(""));
-}
-
-[Test]
-public void TestBasenameOfNull()
-{
-  Assert.That(Filenames.Basename(null, '/'), Is.EqualTo(""));
-}
-  \end{lstlisting}
-  \vspace{1ex}
-
-  How many tests does the Test Runner show afterwards?
-\end{exerciseframe}
-
-\begin{solutionframe}{From Three Tests to One}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-[TestCase("Assets/MyFile.cs", "MyFile.cs")]
-[TestCase("MyDir/", "")]
-[TestCase(null, "")]
-public void TestBasename(string path, string expected)
-{
-  Assert.That(Filenames.Basename(path, '/'), Is.EqualTo(expected),
-              $"Basename of {path}");
-}
-  \end{lstlisting}
-  \begin{itemize}
-    \item Still three tests in the runner, one per \texttt{[TestCase]}, each
-      named by its arguments. You lose nothing in reporting and gain a place to
-      add a fourth case in one line.
-    \item \texttt{[Test]} is dropped: \texttt{[TestCase]} already marks the
-      method as a test.
-  \end{itemize}
-  \vspace{2ex}
-
-  \hint{This is exactly \texttt{TestFilenames} in SEE, where three parameterized
-  methods carry 23 cases between them. Adding a case must be cheaper than not
-  adding it.}
-\end{solutionframe}
-
-\begin{exerciseframe}{Which Skip Mechanism?}
-  Pick one of \texttt{[Ignore]}, \texttt{[Explicit]}, \texttt{[Category]},
-  \texttt{Assert.Ignore} and \texttt{Assert.Inconclusive} for each situation,
-  and justify it in one sentence.
-  \vspace{1ex}
-
-  \begin{enumerate}
-    \item The test needs a GitHub access token that only two developers have.
-    \item The test drives a stress run over 10\,000 graphs and takes 20 minutes.
-    \item The feature under test is not implemented yet; the test is written and
-      red.
-    \item The test needs a full \texttt{git} clone, which the CI runner cannot
-      make.
-    \item The test needs a codec that is missing on Linux only.
-  \end{enumerate}
-\end{exerciseframe}
-
-\begin{solutionframe}{Which Skip Mechanism?}
-  \begin{enumerate}
-    \item \texttt{Assert.Inconclusive} in \texttt{[SetUp]}: only at run time can
-      you see whether the token is there, and the test truly has no verdict.
-    \item \texttt{[Explicit]}: it should never run by accident, but a developer
-      must be able to select and run it deliberately.
-    \item \texttt{[Ignore("...")]} with a reason: it must keep nagging in every
-      report until someone implements the feature.
-    \item \texttt{[Category("SkipOnCI")]}: the exclusion belongs to the runner
-      that cannot satisfy it, not to the test.
-    \item \texttt{Assert.Ignore} guarded by a platform check --- the condition
-      is a property of the machine, known only at run time.
-  \end{enumerate}
-  \vspace{2ex}
-
-  \hint{All five occur in SEE. Cases 1, 3, 4 and 5 are
-  \texttt{TestGitSEE}, \texttt{TestGitGraphProvider}, \texttt{TestGraphProviders}
-  and \texttt{TestGraphIO} respectively, and case 2 is\\
-  \texttt{TestReflexionAnalysisStress}.}
-\end{solutionframe}
-
-\begin{exerciseframe}{Repair a Play-Mode Test}
-  This test is red although the production code is correct. Find all three
-  mistakes.
-  \vspace{1ex}
-
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-internal class TestSpinner : TestUI
-{
-  [Test]
-  private void TestRotation()
-  {
-    GameObject cube = new GameObject("Cube");
-    Spinner spinner = cube.AddComponent<Spinner>();
-
-    Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
-  }
-}
-  \end{lstlisting}
-  \vspace{1ex}
-
-  \texttt{Spinner} is a \texttt{MonoBehaviour} rotating its transform a little
-  in every \texttt{Update}.
-\end{exerciseframe}
-
-\begin{solutionframe}{Repair a Play-Mode Test}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-[UnityTest]                              // 1: needs frames
-public IEnumerator TestRotation()        // 2: must be public
-{
-  GameObject cube = new GameObject("Cube");
-  Spinner spinner = cube.AddComponent<Spinner>();
-  yield return null;                     // 3: let Update run once
-  Assert.That(cube.transform.rotation, Is.Not.EqualTo(Quaternion.identity));
-}
-  \end{lstlisting}
-  \begin{itemize}
-    \item \texttt{[Test]} never advances a frame, so \texttt{Update} is never
-      called and the rotation stays at the identity.
-    \item A \texttt{private} test method is not discovered at all: the test does
-      not fail, it silently does not exist.
-    \item Without a \texttt{yield}, even \texttt{[UnityTest]} asserts on the
-      very frame in which the component was added.
-  \end{itemize}
-  \vspace{1ex}
-
-  \hint{A fourth issue lurks: \texttt{cube} is never destroyed and leaks into
-  the next test. That is what \texttt{[UnityTearDown]} is for.}
-\end{solutionframe}
-
-\begin{exerciseframe}{Predict the Lifecycle}
-  Two tests run in \texttt{Derived}. In which order are the six methods called?
-  \vspace{1ex}
-
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-internal abstract class Base
-{
-  [OneTimeSetUp] public void OnceBase()  => Log("OnceBase");
-  [SetUp]        public void EachBase()  => Log("EachBase");
-  [TearDown]     public void AfterBase() => Log("AfterBase");
-}
-
-internal class Derived : Base
-{
-  [SetUp]    public void EachDerived()  => Log("EachDerived");
-  [TearDown] public void AfterDerived() => Log("AfterDerived");
-
-  [Test] public void First()  => Log("First");
-  [Test] public void Second() => Log("Second");
-}
-  \end{lstlisting}
-  \vspace{1ex}
-
-  And: may you rely on \texttt{First} running before \texttt{Second}?
-\end{exerciseframe}
-
-\begin{solutionframe}{Predict the Lifecycle}
-  \begin{lstlisting}[language={},basicstyle=\scriptsize\ttfamily]
-OnceBase
-  EachBase, EachDerived, First,  AfterDerived, AfterBase
-  EachBase, EachDerived, Second, AfterDerived, AfterBase
-  \end{lstlisting}
-  \begin{itemize}
-    \item Set-up descends the hierarchy, tear-down climbs it, so a derived
-      fixture can build on what its base prepared and tear down its own
-      additions first.
-    \item \texttt{OnceBase} runs once for the whole fixture, not once per test.
-    \item No, you may not rely on the order of \texttt{First} and
-      \texttt{Second}. NUnit currently sorts alphabetically, but that is not a
-      promise --- if the order matters, the tests share state and are broken.
-  \end{itemize}
-  \vspace{2ex}
-
-  \hint{Everything a test needs must be built in \texttt{[SetUp]} and dropped in
-  \texttt{[TearDown]}. That is the price of being allowed to run tests in
-  isolation, in parallel, or one alone.}
-\end{solutionframe}
-
-\begin{exerciseframe}{An Expected Error}
-  \texttt{GraphReader.Load} logs an error and returns an empty graph when the
-  file does not exist. Write the test.
-  \vspace{1ex}
-
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-[Test]
-public void TestMissingFile()
-{
-  Graph graph = GraphReader.Load("does/not/exist.gxl");
-  Assert.That(graph.NodeCount, Is.EqualTo(0));
-}
-  \end{lstlisting}
-  \vspace{1ex}
-
-  As written the test fails, even though the production code behaves exactly as
-  specified. Why, and what do you add?
-\end{exerciseframe}
-
-\begin{solutionframe}{An Expected Error}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-[Test]
-public void TestMissingFile()
-{
-  LogAssert.Expect(LogType.Error, new Regex(".*does/not/exist.gxl.*"));
-
-  Graph graph = GraphReader.Load("does/not/exist.gxl");
-  Assert.That(graph.NodeCount, Is.EqualTo(0));
-}
-  \end{lstlisting}
-  \begin{itemize}
-    \item Unity fails any test during which an error is logged, hence the
-      correct behaviour of the reader is what breaks the test.
-    \item \texttt{LogAssert.Expect} is an assertion in both directions: it
-      swallows that one message, and it fails the test if the message does not
-      appear. The specified behaviour is now fully covered.
-    \item \texttt{LogAssert} comes from \texttt{UnityEngine.TestTools}, not from
-      NUnit.
-  \end{itemize}
-  \vspace{1ex}
-
-  \hint{Resist \texttt{LogAssert.ignoreFailingMessages = true}. It turns this
-  test green, and every future error in the reader along with it.}
-\end{solutionframe}
 
 \endinput
 
