@@ -6,10 +6,12 @@
 \showtitlepage{Asynchronous Computing in C\#}
 
 \begin{frame}{Why Asynchrony at All?}
-  A game renders a frame every 16 milliseconds. Everything your code does
-  happens inside that budget, on one thread. Read a file, wait for a web
-  request, parse a large graph --- and the frame is gone, together with the
-  next hundred.
+  A game must finish a frame before the display asks for the next one. How long
+  that is depends on the target: roughly 16 ms on a 60\,Hz monitor, 11 ms on a
+  VR headset at 90\,Hz, 7 ms at 144\,Hz. Whatever the number, it is a budget,
+  and everything your code does is spent from it, on one thread. Read a file,
+  wait for a web request, parse a large graph --- and the frame is gone,
+  together with the next hundred.
   \vspace{1ex}
 
   \begin{itemize}
@@ -388,8 +390,8 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
 
 \begin{frame}{UniTask: Why Not \texttt{Task}?}
   \texttt{Task} was designed for servers: thread pools, work stealing, many
-  cores. A game has one main thread and a 16 ms budget, and it must not
-  allocate every frame.
+  cores. A game has one main thread, a few milliseconds per frame, and must not
+  allocate on every one of them.
   \vspace{1ex}
 
   \begin{itemize}
