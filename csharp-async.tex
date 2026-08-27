@@ -385,6 +385,7 @@ Graph graph = awaiter.GetResult();        // the value, or a rethrow
 \end{frame}
 
 \begin{frame}{\texttt{await} Is Not a Thread}
+  \framelabel{slide:notathread}
   The single most common misconception: \texttt{await} does not start a
   thread, and an \texttt{async} method does not run in the background.
   \vspace{2ex}
@@ -482,6 +483,32 @@ private async UniTaskVoid Start()
   graph been loaded a moment earlier, the bug would surface once a month on a
   slower machine.}
 \end{solutionframe}
+
+\begin{frame}{Why Cancel at All?}
+  An operation worth starting a second ago may be pointless now: the user
+  closes the city, reloads it from another GXL file, or leaves play mode ---
+  while load, layout and request keep running for a result nobody waits for.
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \textbf{Nothing else can stop it.} An \texttt{async} method is not a
+      thread; there is no \texttt{Abort}. Either the operation ends itself, or
+      it runs to its end.
+    \item \textbf{A late result can do damage.} A load finishing after its city
+      is gone writes into destroyed objects, or replaces the graph the user is
+      looking at now.
+    \item \textbf{Some operations never end.} A server that does not answer
+      leaves your \texttt{await} pending forever, and silently
+      (\slideref{slide:notathread}). A deadline turns that into a failure you
+      can report, which is what \texttt{AsyncUtils.RunWithTimeoutAsync} does
+      for SEE's dashboard and LSP requests.
+  \end{itemize}
+  \vspace{0.5ex}
+
+  \hint{The one who cancels may be a clock: \texttt{CancellationTokenSource.CancelAfter(\ldots)}
+  gives every animation phase of \texttt{TransitionRenderer} 15 seconds, after
+  which its token is cancelled like any other.}
+\end{frame}
 
 \begin{frame}[fragile]{Cancellation Is Cooperative}
   Nothing can abort a running method from outside. Cancellation is a
