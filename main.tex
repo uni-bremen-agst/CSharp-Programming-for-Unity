@@ -5,6 +5,8 @@
 \usepackage{xcolor}
 \usepackage[american]{babel}
 \usepackage{fontawesome5}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 
 %%% for listings
 \xdefinecolor{mygray}{gray}{.90}
@@ -72,6 +74,36 @@
   \begin{beamerboxesrounded}[upper=hint title,lower=hint body,shadow=true]{\faLightbulb\ #1}%
     #2%
   \end{beamerboxesrounded}%
+}
+
+%%% UML sequence diagrams
+%%%
+%%% Enough TikZ styles for a hand-drawn sequence diagram; no extra package is
+%%% needed. A lifeline consists of a head node (lifeline head) and a dashed
+%%% vertical line below it, drawn by hand so that its length can be chosen per
+%%% diagram. An object executes only while an activation bar covers its
+%%% lifeline. Calls are solid (msg), returns dashed (ret). The label above an
+%%% arrow names the call, the one below it (msgnote) comments on it.
+\tikzset{
+  lifeline head/.style   = {draw, rounded corners=2pt, fill=black!5,
+                            align=center, inner sep=3pt,
+                            font=\scriptsize\bfseries},
+  lifeline/.style        = {densely dashed, black!45},
+  %%% Drawn over the arrow labels, hence translucent: a bar may cross a label
+  %%% that spans the whole diagram, and the words below must stay readable.
+  activation/.style      = {draw=black!45, fill=black!12,
+                            draw opacity=0.55, fill opacity=0.55},
+  msg/.style             = {-{Stealth[length=4pt]}, semithick},
+  ret/.style             = {-{Stealth[length=4pt]}, densely dashed, black!55},
+  %%% fill=white lets a label mask the lifelines and band separators it
+  %%% crosses, align=center holds its optional second, commenting line.
+  msglabel/.style        = {above, inner sep=1.5pt, font=\scriptsize,
+                            align=center, fill=white},
+  bandline/.style        = {densely dotted, black!30},
+  bandlabel/.style       = {anchor=west, font=\scriptsize\itshape,
+                            text=black!60},
+  seqnote/.style         = {draw=black!35, fill=hintbg, rounded corners=2pt,
+                            align=center, inner sep=3pt, font=\scriptsize}
 }
 
 %%% Exercise and solution slides

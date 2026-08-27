@@ -86,12 +86,12 @@ public IEnumerator StartXRCoroutine()
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-yield return null;                     // next frame
-yield return new WaitForSeconds(0.5f); // after 0.5 s of game time
-yield return new WaitForEndOfFrame();  // after rendering this frame
-yield return new WaitUntil(() => ready);
-yield return SomeOtherCoroutine();     // until that one finishes
-yield break;                           // stop here
+yield return null;                        // next frame
+yield return new WaitForSeconds(0.5f);    // after 0.5 s of game time
+yield return new WaitForEndOfFrame();     // after rendering this frame
+yield return new WaitUntil(() => ready);  // until ready becomes true
+yield return SomeOtherCoroutine();        // until that one finishes
+yield break;                              // stop here
   \end{lstlisting}
   \vspace{1ex}
 
@@ -101,7 +101,79 @@ yield break;                           // stop here
     \item \texttt{IEnumerator} is the same interface \texttt{foreach} uses. A
       coroutine is a sequence whose elements happen to be
       \emph{wait instructions}.
+    \item Waiting is polling, not an event: \texttt{WaitUntil} evaluates its
+      predicate once per frame, so an expensive predicate costs you every
+      frame until it turns true.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Who Calls Whom: The Player Loop and Your Coroutine}
+  \begin{center}
+    \begin{tikzpicture}[font=\scriptsize]
+      %%% The three lifelines stand at x = 0, 4, and 8.2, their activation bars
+      %%% are 0.14 wide, so the arrows run between x = 0.07 and x = 8.13. Each
+      %%% arrow carries a single label above it, the commenting part in italics
+      %%% and in parentheses; one line per label keeps consecutive rows 0.45
+      %%% apart without a label masking the arrow above it. The frame bands are
+      %%% labelled at x = -2.2 and reach to x = 9.4.
+      \node[lifeline head] at (0,0)   {Player loop\\\normalfont(Unity)};
+      \node[lifeline head] at (4,0)   {Your script\\\normalfont(\texttt{MonoBehaviour})};
+      \node[lifeline head] at (8.2,0) {Coroutine\\\normalfont(\texttt{IEnumerator})};
+      \foreach \x in {0,4,8.2} \draw[lifeline] (\x,-0.45) -- (\x,-5.3);
+
+      %%% Frame n: the coroutine is started and runs up to its first yield.
+      \draw[bandline] (-2.2,-0.7) -- (9.4,-0.7);
+      \node[bandlabel] at (-2.2,-0.52) {Frame $n$};
+      \draw[msg] (0.07,-1.0) -- node[msglabel] {\texttt{Update()}} (3.93,-1.0);
+      \draw[msg] (3.93,-1.45) -- node[msglabel] {\texttt{StartCoroutine(C())}} (0.07,-1.45);
+      %%% These two labels are the ones the activation bar of the script
+      %%% crosses; they are nudged so that it falls into a gap between words.
+      \draw[msg] (0.07,-1.9) -- node[msglabel, xshift=2.2mm]
+        {\texttt{MoveNext()} \itshape\color{black!55} (runs the body up to the first yield)}
+        (8.13,-1.9);
+      \draw[ret] (8.13,-2.35) -- node[msglabel, xshift=1.2mm]
+        {\texttt{true}, \texttt{Current = null} \itshape\color{black!55} (resume in the next frame)}
+        (0.07,-2.35);
+
+      %%% Frame n+1: it is resumed where it stopped and asks for a delay.
+      \draw[bandline] (-2.2,-2.65) -- (9.4,-2.65);
+      \node[bandlabel] at (-2.2,-2.47) {Frame $n{+}1$};
+      \draw[msg] (0.07,-3.05) -- node[msglabel]
+        {\texttt{MoveNext()} \itshape\color{black!55} (after Update, continuing after that yield)}
+        (8.13,-3.05);
+      \draw[ret] (8.13,-3.5) -- node[msglabel]
+        {\texttt{true}, \texttt{Current = new WaitForSeconds(0.5f)}} (0.07,-3.5);
+
+      %%% The waiting frames: nobody calls the coroutine at all.
+      \node[seqnote] at (4.1,-3.9) {no call for 0.5\,s of game time};
+
+      %%% Frame m: the method ends and the enumerator is discarded.
+      \draw[bandline] (-2.2,-4.3) -- (9.4,-4.3);
+      \node[bandlabel] at (-2.2,-4.12) {Frame $m$};
+      \draw[msg] (0.07,-4.7) -- node[msglabel] {\texttt{MoveNext()}} (8.13,-4.7);
+      \draw[ret] (8.13,-5.15) -- node[msglabel]
+        {\texttt{false} \itshape\color{black!55} (the method ended; Unity drops the enumerator)}
+        (0.07,-5.15);
+
+      %%% The activation bars come after the arrows: the labels are filled
+      %%% white to mask the lifelines they cross and would otherwise cut the
+      %%% bars into pieces. The player loop is the only participant that runs
+      %%% all the time; the coroutine runs during a MoveNext and never else.
+      %%% Update is still on the stack while the first MoveNext runs -- Unity
+      %%% starts the coroutine right inside StartCoroutine -- hence the bar of
+      %%% the script reaches down to the return of that first call.
+      \fill[activation] (-0.07,-0.9) rectangle (0.07,-5.3);
+      \fill[activation] (3.93,-1.0) rectangle (4.07,-2.45);
+      \fill[activation] (8.13,-1.9) rectangle (8.27,-2.35);
+      \fill[activation] (8.13,-3.05) rectangle (8.27,-3.5);
+      \fill[activation] (8.13,-4.7) rectangle (8.27,-5.15);
+    \end{tikzpicture}
+  \end{center}
+
+  The bar on the right shows when the coroutine \emph{runs}: only inside
+  \texttt{MoveNext}, on the player loop's thread --- the first slice still
+  inside \texttt{StartCoroutine}. In between it is an object on the heap
+  remembering its last \texttt{yield}.
 \end{frame}
 
 \begin{frame}{Where Coroutines Fall Short}
