@@ -503,7 +503,7 @@ private async UniTaskVoid Start()
       can report, which is what \texttt{AsyncUtils.RunWithTimeoutAsync} does
       for SEE's dashboard and LSP requests.
   \end{itemize}
-  \vspace{0.5ex}
+  \vspace{0.2ex}
 
   \hint{The one who cancels may be a clock: \texttt{CancellationTokenSource.CancelAfter(\ldots)}
   gives every animation phase of \texttt{TransitionRenderer} 15 seconds, after
@@ -542,23 +542,21 @@ source.Cancel();                          // from the other side
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/GraphProviders/GXLGraphProvider.cs
 public override async UniTask<Graph> ProvideAsync
-    (Graph graph, AbstractSEECity city,
-     Action<float> changePercentage = null,
-     CancellationToken token = default)          // handed through
+    (Graph graph, ..., CancellationToken token = default)   // handed on
 {
   return await GraphReader.LoadAsync(Path, ..., token);
 }
 
-// Assets/SEE/Game/City/SEECity.cs
+// Assets/SEE/DataModel/DG/IO/GXLParser.cs -- GraphReader extends GXLParser,
+// so the call above lands in the XML read loop of its base class, which does:
+token.ThrowIfCancellationRequested();            // at every XML node
+
+// Assets/SEE/Game/City/SEECity.cs -- on every reload, because a cancelled
+// source stays cancelled:
 cancellationTokenSource.Cancel();                // stop the old load
 cancellationTokenSource = new CancellationTokenSource();
   \end{lstlisting}
-  \vspace{1ex}
-
-  Every graph provider takes a token and hands it on; the \texttt{GXLParser}
-  read loop checks it at every XML node. Reloading a city cancels the previous
-  load and installs a fresh source, because a cancelled source stays cancelled.
-  \vspace{1ex}
+  \vspace{0.5ex}
 
   \hint{The default of that parameter is \texttt{CancellationToken.None} --- a
   token that can never be cancelled. Convenient in tests, a silent loss of
@@ -607,6 +605,54 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
 
   \hint{Do not catch \texttt{OperationCanceledException} to log an error.
   Cancellation is not a failure; it is the answer you asked for.}
+\end{solutionframe}
+
+\begin{exerciseframe}{Give It a Deadline}
+  The dashboard sometimes does not answer at all, and the city then waits for
+  ever. Give the loop a deadline of five seconds --- without taking the
+  caller's own cancellation away.
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
+{
+  foreach (Node node in graph.Nodes())
+  {
+    token.ThrowIfCancellationRequested();
+    Metric metric = await dashboard.FetchAsync(node.ID, token);
+    node.SetFloat("Metric.Complexity", metric.Value);
+  }
+}
+  \end{lstlisting}
+\end{exerciseframe}
+
+\begin{solutionframe}{Give It a Deadline}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
+{
+  using CancellationTokenSource deadline           // cancelled by either
+      = CancellationTokenSource.CreateLinkedTokenSource(token);
+  deadline.CancelAfter(TimeSpan.FromSeconds(5));
+  foreach (Node node in graph.Nodes())
+  {
+    deadline.Token.ThrowIfCancellationRequested();
+    Metric metric = await dashboard.FetchAsync(node.ID, deadline.Token);
+    node.SetFloat("Metric.Complexity", metric.Value);
+  }
+}
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \textbf{Link, do not replace.} \texttt{deadline.Token} is cancelled
+      by the caller \emph{or} by the timer, and carries both downwards; the
+      \texttt{using} disposes that timer.
+    \item \textbf{Tell the two apart.} In the \texttt{catch},
+      \texttt{token.IsCancellationRequested} is false if the deadline fired
+      --- a failure to report, unlike the other case.
+  \end{itemize}
+  \vspace{0.5ex}
+
+  \hint{SEE wraps this whole pattern in \texttt{AsyncUtils.RunWithTimeoutAsync}.}
 \end{solutionframe}
 
 \begin{frame}{UniTask: Why Not \texttt{Task}?}
