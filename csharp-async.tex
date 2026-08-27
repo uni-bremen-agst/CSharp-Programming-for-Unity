@@ -108,6 +108,7 @@ yield break;                              // stop here
 \end{frame}
 
 \begin{frame}{Who Calls Whom: The Player Loop and Your Coroutine}
+  \framelabel{slide:coroutineloop}
   \begin{center}
     \begin{tikzpicture}[font=\scriptsize]
       %%% The three lifelines stand at x = 0, 4, and 8.2, their activation bars
@@ -263,6 +264,126 @@ private async UniTask<Graph> LoadAsync(DataPath path)
   \texttt{DeleteTableAsync}.}
 \end{frame}
 
+\begin{frame}{Who Calls Whom: The Player Loop and an \texttt{async} Method}
+    \begin{center}
+        \begin{tikzpicture}[font=\scriptsize]
+            %%% Same geometry as the coroutine diagram on slide
+            %%% \ref{slide:coroutineloop}, so that both can be compared: lifelines at
+            %%% x = 0, 4, and 8.5, bands labelled at x = -2.2, one single-line label
+            %%% above each arrow. The two right lifelines are the two methods of
+            %%% slide \ref{slide:asyncawait}, both of them state machines, which is
+            %%% the whole point: awaiting is chained. The third lifeline stands
+            %%% further right than on the coroutine slide, because both its head and
+            %%% the labels reaching it are wider.
+            \node[lifeline head] at (0,0)   {Player loop\\\normalfont(Unity $+$ UniTask)};
+            \node[lifeline head] at (4,0)   {\texttt{LoadAsync()}\\\normalfont(your method)};
+            \node[lifeline head] at (8.5,0) {\texttt{GraphReader.LoadAsync()}\\\normalfont(the awaited one)};
+            \foreach \x in {0,4,8.5} \draw[lifeline] (\x,-0.45) -- (\x,-5.35);
+
+            %%% Frame n: both methods run up to their own await and return. Rows
+            %%% are 0.42 apart here, one row more than on the coroutine slide.
+            \draw[bandline] (-2.2,-0.7) -- (10.2,-0.7);
+            \node[bandlabel] at (-2.2,-0.52) {Frame $n$};
+            %%% Your method is called from an ordinary Unity message; that call is
+            %%% not a lifeline of its own, so the arrow comes from the loop and the
+            %%% label says where from.
+            \draw[msg] (0.07,-1.0) -- node[msglabel, xshift=2mm]
+            {\texttt{LoadAsync(path)} \itshape\color{black!55} (from Update)}
+            (3.93,-1.0);
+            \draw[msg] (4.07,-1.42) -- node[msglabel]
+            {\texttt{GraphReader.LoadAsync(path)}} (8.43,-1.42);
+            %%% Not a call but a registration, and not the await of your method:
+            %%% the awaited one has run up to an await of its own, on something we
+            %%% do not see from here, and the loop is what will complete it. Both
+            %%% labels therefore say whose await they are. This one crosses the bar
+            %%% of your method and is nudged so that the bar falls between words.
+            \draw[msg] (8.43,-1.84) -- node[msglabel, xshift=3.6mm]
+            {\texttt{await} \itshape\color{black!55} (its own registers a continuation)}
+            (0.07,-1.84);
+            \draw[ret] (8.43,-2.26) -- node[msglabel]
+            {\texttt{UniTask<Graph>} \itshape\color{black!55} (not finished)} (4.07,-2.26);
+            %%% Only now does your method register: an await first evaluates its
+            %%% operand -- the call above -- and registers afterwards, and only if
+            %%% the UniTask it got back is not already completed. This is the arrow
+            %%% that the second MoveNext of frame m comes from.
+            \draw[msg] (4.07,-2.68) -- node[msglabel]
+            {\texttt{await} \itshape\color{black!55} (now yours registers one)} (8.43,-2.68);
+            \draw[ret] (3.93,-3.1) -- node[msglabel]
+            {\texttt{UniTask<Graph>}} (0.07,-3.1);
+
+            %%% What the awaited method waits for is none of our business here, so
+            %%% the note does not name it; everything else in the frame is
+            %%% unaffected either way.
+            \node[seqnote] at (4.25,-3.45) {the frame goes on as usual; neither method is\\
+                resumed until the awaited operation completes};
+
+            %%% Frame m: the continuations are called, and completion travels back
+            %%% up the chain.
+            \draw[bandline] (-2.2,-4.0) -- (10.2,-4.0);
+            \node[bandlabel] at (-2.2,-3.82) {Frame $m$};
+            \draw[msg] (0.07,-4.35) -- node[msglabel]
+            {\texttt{MoveNext()} \itshape\color{black!55} (the registered continuation)}
+            (8.43,-4.35);
+            %%% Shifted left so that the label ends short of the awaited method's
+            %%% lifeline; it may reach over the one of your method, whose bar
+            %%% starts only here.
+            \draw[msg] (8.43,-4.77) -- node[msglabel, xshift=-15mm]
+            {\texttt{MoveNext()} \itshape\color{black!55} (your method resumes, with the graph)}
+            (4.07,-4.77);
+            \draw[ret] (3.93,-5.19) -- node[msglabel]
+            {\itshape\color{black!55} its UniTask completes} (0.07,-5.19);
+
+            %%% The activation bars come last, see the coroutine diagram. Both
+            %%% methods are on the stack twice: once up to their await, once in
+            %%% their continuation. Your method stays active while the awaited one
+            %%% runs synchronously up to its own await.
+            \fill[activation] (-0.07,-0.9) rectangle (0.07,-5.35);
+            \fill[activation] (3.93,-1.0) rectangle (4.07,-3.15);
+            \fill[activation] (8.43,-1.42) rectangle (8.57,-2.31);
+            \fill[activation] (8.43,-4.35) rectangle (8.57,-4.82);
+            \fill[activation] (3.93,-4.77) rectangle (4.07,-5.24);
+        \end{tikzpicture}
+    \end{center}
+    %%% The centred picture brings its own vertical padding; the caption needs
+    %%% the space more than the gap does.
+    \vspace{-2ex}
+
+    Same code as \slideref{slide:asyncawait}, same shape as
+    \slideref{slide:coroutineloop}: two \texttt{await}s, two registered
+    continuations --- and nobody polls. Had the awaited \texttt{UniTask} been
+    finished already, no continuation would have been registered at all and the
+    method would have run straight on, still in frame~$n$.
+\end{frame}
+
+\begin{frame}[fragile]{What \texttt{await E} Does, Exactly}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// await GraphReader.LoadAsync(path), roughly as the compiler rewrites it
+UniTask<Graph>.Awaiter awaiter = GraphReader.LoadAsync(path).GetAwaiter();
+if (!awaiter.IsCompleted)                 // E has run; not finished yet?
+{
+  awaiter.UnsafeOnCompleted(MoveNext);    // register the rest of the body
+  return;                                 // and hand control to the caller
+}
+Graph graph = awaiter.GetResult();        // the value, or a rethrow
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \textbf{The operand runs first.} \texttt{E} is evaluated before
+      anything is registered: the call starts the work, never the
+      \texttt{await}.
+    \item \textbf{A finished operation costs nothing.} If \texttt{IsCompleted}
+      is true, nothing is registered and no frame is lost.
+    \item \textbf{Otherwise the rest of the method becomes the continuation},
+      control returns to the caller, and the resumed method re-enters at
+      \texttt{GetResult()}.
+    \item \textbf{The method's own \texttt{return} is generated, too:} your
+      \texttt{return graph;} becomes \texttt{builder.SetResult(graph)}, and the
+      stub ends in \texttt{return builder.Task;} --- a plain
+      \texttt{async UniTask} needs none, like \texttt{void}.
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{\texttt{await} Is Not a Thread}
   The single most common misconception: \texttt{await} does not start a
   thread, and an \texttt{async} method does not run in the background.
@@ -284,6 +405,7 @@ private async UniTask<Graph> LoadAsync(DataPath path)
   \texttt{await} to stop \emph{waiting} on the main thread; use a thread pool
   to stop \emph{computing} on it. They solve different problems.}
 \end{frame}
+
 
 \begin{frame}[fragile]{\texttt{async void} Is a Trap}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
