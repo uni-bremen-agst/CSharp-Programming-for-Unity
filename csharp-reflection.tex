@@ -1,0 +1,422 @@
+%%% -*- coding: utf-8 -*-
+
+\lecture{Reflection and Annotations}{reflection}
+\section{Reflection and Annotations}
+
+\showtitlepage{Reflection and Annotations}
+
+%%% Every example is taken from SEE, so the sources named in the listings can
+%%% be opened next to the slide.
+
+\begin{frame}{Why Reflection at All?}
+  Normally the compiler resolves every name for you: which class, which field,
+  which method, all fixed when the code is built. Sometimes it cannot. A
+  message arrives over the network and names its own class. A configuration
+  file names a tool. A menu is built from whatever a city happens to offer, and
+  a test runner must find methods that were written long after it was.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \emph{Reflection} is the run-time view of that metadata: ask an
+      object what it is, list its members, create instances, call methods ---
+      all decided while the program runs.
+    \item \emph{Annotations}, in C\# called \emph{attributes}, are the notes
+      you leave in that metadata for such a reader to find.
+    \item Both live at the edges of a program: frameworks, factories, editors,
+      serialisation. In the middle of your code they are the wrong tool.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{SEE sends an action over the network as its type name plus JSON, and
+  the receiver builds the object from that name --- there is no other way to
+  know which action arrived.}
+\end{frame}
+
+\begin{frame}[fragile]{The \texttt{Type} Object}
+  \framelabel{slide:typeobject}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+SEECity city = FindFirstObjectByType<SEECity>(); // from the scene, not new
+Type declared = typeof(SEECity);        // known when the code is built
+Type actual   = city.GetType();         // whatever the object really is
+Type named    = Type.GetType(typeName); // from a string; null if unknown
+
+FieldInfo[] fields = actual.GetFields();         // public instance ones
+MethodInfo  reset  = actual.GetMethod("Reset");  // public, by name
+
+FieldInfo hidden = actual.GetField("graph",            // everything else has
+    BindingFlags.NonPublic | BindingFlags.Instance);   // to be asked for
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{Type} is the entry point, and every member comes back as an
+      object of its own --- \texttt{FieldInfo}, \texttt{MethodInfo},
+      \texttt{PropertyInfo} --- carrying its name, its type and its
+      annotations.
+    \item \texttt{BindingFlags} decides what you are shown. The default is
+      public and instance; asking for anything else and forgetting to say so
+      is not an error but a \texttt{null}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{From a Type to an Object}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/Attributable.cs -- clone without knowing what
+Attributable clone = (Attributable)Activator.CreateInstance(GetType());
+
+// Assets/SEE/Net/Actions/AbstractNetAction.cs -- the type travels as text
+string data = action.GetType().ToString() + ';' + JsonUtility.ToJson(action);
+...
+string[] tokens = data.Split(new[] { ';' }, 2, StringSplitOptions.None);
+AbstractNetAction received = (AbstractNetAction)JsonUtility.FromJson(
+    tokens[1], Type.GetType(tokens[0]));
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{Activator.CreateInstance} calls the parameterless
+      constructor: there has to be one, and it has to be accessible.
+    \item \texttt{CreateInstance} and \texttt{FromJson} both hand back an
+      \texttt{object}: the cast in front --- to \texttt{Attributable}, to
+      \texttt{AbstractNetAction} --- is the only check you get, and it happens
+      when the line runs.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Calling a Method by Name}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/AbstractSEECity.cs -- all four are declared there
+reset.Invoke(city, null);                       // Reset() is void: null
+
+MethodInfo save = actual.GetMethod("Save");     // void Save(string filename)
+save.Invoke(city, new object[] { "city.cfg" }); // arguments in one array
+
+MethodInfo types = actual.GetMethod("HierarchicalEdgeTypes");
+object all = types.Invoke(null, null);          // static: no receiver
+// two overloads are public, so GetMethod must be told which one
+MethodInfo hover = actual.GetMethod("UserIsHoveringCity", Type.EmptyTypes);
+bool yes = (bool)hover.Invoke(city, null);      // a boxed bool
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The receiver comes first --- \texttt{null} for a static method,
+      otherwise an instance of the declaring type, or a
+      \texttt{TargetException}.
+    \item The arguments come as one \texttt{object[]}, not as a parameter list.
+      \texttt{null} means none, optional parameters are not filled in for you,
+      and a wrong count is a \texttt{TargetParameterCountException}.
+    \item The result is an \texttt{object}: \texttt{null} for \texttt{void}, a
+      boxed copy for a value type, so the cast must name the exact type ---
+      \texttt{(long)} on a boxed \texttt{int} throws.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Annotations Are Data}
+  \framelabel{slide:attributes}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/EnvironmentVariable.cs
+[AttributeUsage(AttributeTargets.Field)]      // where it may be written
+public class EnvironmentVariableAttribute : Attribute
+{
+  public string VariableName { get; }
+  public EnvironmentVariableAttribute(string variableName) { ... }
+}
+
+[EnvironmentVariable("DEBUG_LOG")]            // a constructor call, stored
+public bool debugLog;                         // in the metadata
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item An attribute is an ordinary class derived from \texttt{Attribute}.
+      Writing it in brackets records a call to its constructor; it runs when
+      somebody asks for the attribute, never when the field is used.
+    \item The suffix is convention: the class is \texttt{XAttribute}, the
+      annotation is written \texttt{[X]}.
+    \item You have seen them all along: \texttt{[SerializeField]},
+      \texttt{[Header]} (Unity), \texttt{[Test]} (NUnit),
+      \texttt{[ShowInInspector]} (Odin), \texttt{[Obsolete]} (the compiler
+      itself reads that one).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Reading Annotations}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// one of them, if it is there at all -- inherit is true unless you say so
+RuntimeTabAttribute tab = member.GetCustomAttribute<RuntimeTabAttribute>();
+RuntimeTabAttribute own =
+    member.GetCustomAttribute<RuntimeTabAttribute>(inherit: false);
+
+// all of them, to filter -- Assets/SEE/UI/RuntimeConfigMenu/RuntimeTabMenu.cs
+if (member.GetCustomAttributes().Any(a => a is ObsoleteAttribute)) { ... }
+string name = member.GetCustomAttributes().OfType<RuntimeTabAttribute>()
+                    .FirstOrDefault()?.Name;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The attribute object is constructed when you ask for it, from the
+      call recorded in the metadata. Asking twice gives you two objects.
+    \item The \texttt{inherit} parameter decides whether an annotation on a
+      base member counts as one on the member you are looking
+      at.\footnote{\texttt{MemberInfo.GetCustomAttributes(bool)} ignores it for
+      properties and events; the \texttt{Attribute} helpers behind the
+      extension methods above do emulate it.}
+    \item Nothing at all happens without a reader. Unity's inspector, NUnit's
+      runner and SEE's runtime configuration menu are such readers --- and in
+      the next exercises, so are you.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{What Odin Is}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/AbstractSEECity.cs -- Odin's base class, not Unity's
+public abstract partial class AbstractSEECity : SerializedMonoBehaviour
+
+// Assets/SEE/Game/City/SEECity.cs -- what Unity's serializer cannot store
+[OdinSerialize, ShowInInspector, TabGroup(DataFoldoutGroup), ...]
+public SingleGraphPipelineProvider DataProvider = new();
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Odin Inspector (by Sirenix) is a bought editor
+      extension, in \texttt{Assets/Plugins/Sirenix} like every third-party
+      asset. It replaces Unity's inspector and brings a serializer of its own.
+    \item SEE uses both halves: a city is a \texttt{SerializedMonoBehaviour},
+      so dictionaries, interfaces and polymorphic objects survive a save; and
+      its hundred-odd settings are laid out by annotations ---
+      \texttt{[TabGroup]}, \texttt{[Button]}, \texttt{[ShowIf]}.
+    \item Only half of that ships:
+      \texttt{Sirenix.OdinInspector.Attributes.dll} is a run-time assembly and
+      is in the player, while \texttt{Sirenix.OdinInspector.Editor.dll}, which
+      reads those annotations and draws them, is not.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Odin's Annotations at Run Time}
+  Odin's annotations are still in the running game --- their assembly ships
+  with it. The code that reads them is not, so SEE writes its own reader, over
+  twin annotations of its own:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/SEECity.cs -- Odin on the left, our twin on the right
+[TabGroup(DataFoldoutGroup), RuntimeTab(DataFoldoutGroup), ShowInInspector]
+public DataPath GraphSnapshotPath = new();
+
+[Button(ButtonSizes.Small, Name = "Load Data")]         // editor only
+[ButtonGroup(DataButtonsGroup), RuntimeButton(DataButtonsGroup, "Load Data")]
+public virtual async UniTask LoadDataAsync() { ... }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The annotation is inert either way; only the reader differs. Odin's
+      runs in the editor, \texttt{RuntimeTabMenu} in the running game, and
+      neither knows about the other.
+    \item Hence the pairs: \texttt{[TabGroup]}/\texttt{[RuntimeTab]},
+      \texttt{[Button]}/\texttt{[RuntimeButton]},
+      \texttt{[ShowIf]}/\texttt{[RuntimeShowIf]},
+      \texttt{[PropertyOrder]}/\texttt{[RuntimeGroupOrder]}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{How the Menu Reads Them}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/UI/RuntimeConfigMenu/RuntimeTabMenu.cs
+city.GetType().GetMembers().Where(IsCityAttribute)     // public, of a city
+    .OrderBy(HasTabAttribute).ThenBy(GetTabName)       // and two more keys
+    .ForEach(memberInfo => CreateSetting(memberInfo, null, city));
+
+// [RuntimeShowIf(nameof(Kind), ...)] keeps its condition as a string
+MethodInfo m = FindMemberRecursive(type, condition, ...);  // up the chain
+if (m != null && m.ReturnType == typeof(bool))   // the check the compiler
+{                                                // cannot make for you
+    return (bool)m.Invoke(obj, null);
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Forgetting a twin is caught only once the menu is built:
+      \texttt{AssertConditionalAttributePairsValid} throws if a
+      \texttt{[ShowIf]} has no \texttt{[RuntimeShowIf]} --- asked with
+      \texttt{inherit: false}, so only the member's own annotation counts.
+    \item \texttt{FindMemberRecursive} climbs \texttt{BaseType} itself, because
+      \texttt{BindingFlags.NonPublic} finds the private members of one type,
+      never the inherited ones.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What Reflection Costs}
+  It buys you decisions that the compiler cannot make, and it pays for them
+  with everything the compiler would have given you.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \textbf{No compile-time check.} Names are strings. Rename a method
+      and the annotation still looks right, while the lookup quietly returns
+      \texttt{null}. Use \texttt{nameof} wherever a name is not read from data.
+    \item \textbf{A price per lookup.} Scanning an assembly and building
+      \texttt{Info} objects costs orders of magnitude more than a direct call.
+      Do it once and remember the result, as
+      \texttt{ParsingConfigFactory} does in its static constructor. Never per
+      frame.
+    \item \textbf{Invisible to the linker.} A type that nothing references
+      statically may be stripped from an IL2CPP build --- SEE's Android build
+      is one --- and then exists in the editor but not in the player.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Fields from the Environment}
+  SEE can set a field from an environment variable, so that a machine can be
+  configured without touching a scene:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/EnvironmentVariable.cs
+[AttributeUsage(AttributeTargets.Field)]
+public class EnvironmentVariableAttribute : Attribute
+{
+  public string VariableName { get; }
+  public EnvironmentVariableAttribute(string variableName) { ... }
+}
+
+[EnvironmentVariable("DEBUG_LOG")]        // somewhere in a class
+public bool debugLog;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Write \texttt{SetEnvironmentVariableFields<T>(T target)}: every annotated
+  field of \texttt{target} gets the value of its environment variable, and a
+  field whose variable is unset stays as it is.
+\end{exerciseframe}
+
+\begin{solutionframe}{Fields from the Environment}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public static void SetEnvironmentVariableFields<T>(T target)
+{
+  foreach (FieldInfo field in typeof(T).GetFields())   // public ones only
+  {
+    string name = field.GetCustomAttribute<EnvironmentVariableAttribute>()
+                       ?.VariableName;
+    if (name != null && Environment.GetEnvironmentVariable(name) is { } value)
+    {
+      field.SetValue(target, Convert.ChangeType(value, field.FieldType));
+    }
+  }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \texttt{GetFields()} returns \emph{public instance} fields only. A
+      private one needs \texttt{BindingFlags.NonPublic |
+      BindingFlags.Instance}; forget that and the annotation is ignored in
+      silence.
+    \item The environment hands you a \texttt{string}, so
+      \texttt{Convert.ChangeType} does the rest. SEE catches
+      \texttt{FormatException} and \texttt{OverflowException} around it: a typo
+      in the variable is the user's mistake, not a reason to crash.
+  \end{itemize}
+\end{solutionframe}
+
+\begin{exerciseframe}{A Button from an Annotation}
+  SEE's runtime configuration menu shows a button for annotated methods:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/UI/RuntimeConfigMenu/RuntimeButtonAttribute.cs
+public class RuntimeButtonAttribute : Attribute
+{
+  public readonly string Name;
+  public readonly string Label;
+  ...
+}
+
+// Assets/SEE/Game/City/SEECityEvolution.cs
+[RuntimeButton(DataButtonsGroup, "Load and Draw")]
+public async UniTask StartEvolutionAsync() { ... }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Write what the menu needs: collect the annotated methods of a city and call
+  the one whose button was clicked. Which methods must you refuse, and when do
+  you learn that you should have?
+\end{exerciseframe}
+
+\begin{solutionframe}{A Button from an Annotation}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+foreach (MethodInfo method in city.GetType().GetMethods())
+{
+  RuntimeButtonAttribute button
+      = method.GetCustomAttribute<RuntimeButtonAttribute>();
+  if (button != null && method.GetParameters().Length == 0)  // refuse the
+  {                                                          // others
+    AddButton(button.Label, () => method.Invoke(city, null));
+  }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item An attribute is inert data: it does nothing until somebody looks for
+      it. In SEE that somebody is \texttt{RuntimeTabMenu}, and it also refuses
+      methods that expect arguments.
+    \item \texttt{Invoke} passes its arguments as \texttt{object[]}, so nothing
+      here is checked at compile time. A wrong signature, a renamed method, a
+      typo in the label --- all of them surface when the menu is opened, not
+      when the code is built.
+  \end{itemize}
+\end{solutionframe}
+
+\begin{exerciseframe}{A Factory Without a \texttt{switch}}
+  Every metric tool that SEE reads brings its own configuration class:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/
+public abstract class ParsingConfig
+{
+  public string ToolId = string.Empty;    // "JaCoCo", "Checkstyle", ...
+}
+
+public class JaCoCoParsingConfig     : ParsingConfig { ... }
+public class CheckstyleParsingConfig : ParsingConfig { ... }
+public class MSBuildParsingConfig    : ParsingConfig { ... }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \texttt{ParsingConfigFactory.Create("JaCoCo")} shall return the matching
+  configuration, and adding a tool tomorrow shall need no change to the
+  factory. Write the registration.
+\end{exerciseframe}
+
+\begin{solutionframe}{A Factory Without a \texttt{switch}}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+static ParsingConfigFactory()            // runs once, on first access
+{
+  IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes()
+      .Where(t => t.IsSubclassOf(typeof(ParsingConfig)) && !t.IsAbstract);
+  foreach (Type type in types)
+  {
+    ParsingConfig probe = (ParsingConfig)Activator.CreateInstance(type);
+    registry.Add(probe.ToolId, type);    // SEE reports duplicate ToolIds
+  }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \textbf{The instance comes first, the key second.} \texttt{ToolId} is
+      an instance field, so the factory builds a probe to read it, and
+      \texttt{Activator.CreateInstance} wants a public parameterless
+      constructor. A class without one throws while the factory scans, where
+      SEE catches it per type and logs it rather than losing the registry.
+    \item \textbf{The price is paid once}, in the static constructor. Afterwards
+      \texttt{Create} is a dictionary lookup, and a new tool needs nothing but
+      a new subclass.
+  \end{itemize}
+\end{solutionframe}

@@ -6,28 +6,29 @@
   \tableofcontents[hideallsubsections]
 \end{frame}
 
-%\input{overview}
-%\input{csharp-basics}
-%\input{csharp-linq}
+\input{overview}
+\input{csharp-basics}
+\input{csharp-linq}
+\input{csharp-reflection}
 \input{csharp-async}
 \input{csharp-nunit}
 
 \endinput
 
-Part A — Basic C#
-Syntax & types: classes, structs, enums, generics, nullable types (examples: AbstractSEECity and subclasses)
-OOP fundamentals in C#: inheritance, interfaces, abstract classes, polymorphism
-Collections & LINQ (heavily used in graph/layout code, e.g. TreeMap.cs)
+%Part A — Basic C#
+%Syntax & types: classes, structs, enums, generics, nullable types (examples: AbstractSEECity and s%ubclasses)
+%OOP fundamentals in C#: inheritance, interfaces, abstract classes, polymorphism
+%Collections & LINQ (heavily used in graph/layout code, e.g. TreeMap.cs)
 Exceptions and defensive coding at API boundaries
-File I/O and serialization basics (JSON/XML)
-Unit testing with NUnit
+File I/O and serialization basics (JSON/XML); instead: our config IO framework?
+%Unit testing with NUnit
 
 Part B — Advanced C#
-Asynchronous programming: async/await, Task, cancellation tokens
-UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
-Delegates, events, and the observer pattern (heavily used for decoupled game-state notifications)
+%Asynchronous programming: async/await, Task, cancellation tokens
+%UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
+%Delegates, events, and the observer pattern (heavily used for decoupled game-state notifications)
 Reflection & attributes (custom attributes drive serialization/config in DataModel/DG)
-Design patterns: Factory, Strategy, Command (action system in Controls/Actions)
+%Design patterns: Factory, Strategy, Command (action system in Controls/Actions)
 Generics & constraints for reusable algorithms
 Memory management & performance: structs vs. classes, boxing, allocation avoidance in per-frame code
 Concurrency/thread-safety basics (for networked and background operations)
