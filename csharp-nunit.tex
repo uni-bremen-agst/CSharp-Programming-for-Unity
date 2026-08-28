@@ -1043,6 +1043,29 @@ public IEnumerator TestMenuOption1()
   vocabulary grows.}
 \end{frame}
 
+\begin{frame}[fragile]{Asynchronous Code in Tests}
+    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+        // Assets/SEETests/TestGraphIO.cs: NUnit awaits a Task directly
+        [Test, Sequential]
+        public async Task TestGraphWriter([Values(true, false)] bool compress)
+        { ... }
+
+        // Assets/SEETests/TestDataPath.cs: UniTask bridged into [UnityTest]
+        [UnityTest]
+        public IEnumerator LoadFromFile() =>
+        UniTask.ToCoroutine(async () =>
+        {
+            using Stream stream = await dataPath.LoadAsync();
+            Assert.That(Read(stream), Is.EqualTo(content));
+        });
+    \end{lstlisting}
+    \vspace{1ex}
+
+    \texttt{UniTask.ToCoroutine} wraps an asynchronous lambda into the
+    \texttt{IEnumerator} that \texttt{[UnityTest]} expects. Note that both of
+    these live in the \emph{edit-mode} assembly: neither needs the player loop.
+\end{frame}
+
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
     \item One fixture per class under test, named \texttt{Test} plus the name of

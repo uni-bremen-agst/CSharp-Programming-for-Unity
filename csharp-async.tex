@@ -840,8 +840,9 @@ finally
 \end{frame}
 
 \begin{exerciseframe}{Where Does This Run?}
-  This throws \texttt{UnityException: get\_name can only be called from the
-  main thread}. Find the offending line and repair the method.
+  This throws;\\
+  \texttt{UnityException: get\_name can only be called from the main thread}.\\
+  Find the offending line and repair the method.
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -939,29 +940,6 @@ private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
   \texttt{MonoBehaviour} to live on.
 \end{frame}
 
-\begin{frame}[fragile]{Asynchronous Code in Tests}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestGraphIO.cs: NUnit awaits a Task directly
-[Test, Sequential]
-public async Task TestGraphWriter([Values(true, false)] bool compress)
-{ ... }
-
-// Assets/SEETests/TestDataPath.cs: UniTask bridged into [UnityTest]
-[UnityTest]
-public IEnumerator LoadFromFile() =>
-  UniTask.ToCoroutine(async () =>
-  {
-    using Stream stream = await dataPath.LoadAsync();
-    Assert.That(Read(stream), Is.EqualTo(content));
-  });
-  \end{lstlisting}
-  \vspace{1ex}
-
-  \texttt{UniTask.ToCoroutine} wraps an asynchronous lambda into the
-  \texttt{IEnumerator} that \texttt{[UnityTest]} expects. Note that both of
-  these live in the \emph{edit-mode} assembly: neither needs the player loop.
-\end{frame}
-
 \begin{exerciseframe}{From Coroutine to UniTask}
   Rewrite this coroutine as an asynchronous method that can be cancelled and
   reports whether the server answered.
@@ -1016,7 +994,7 @@ private async UniTask<bool> PollServerAsync(CancellationToken token)
 
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
-    \item \texttt{UniTask} everywhere, \texttt{Task} nowhere. Production code
+    \item \texttt{UniTask} everywhere, \texttt{Task} nowhere (not yet). Production code
       contains no \texttt{async Task}; tests may use it because NUnit awaits
       it directly.
     \item Asynchronous methods end in \texttt{Async} and take
