@@ -713,6 +713,62 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
   \hint{SEE wraps this whole pattern in \texttt{AsyncUtils.RunWithTimeoutAsync}.}
 \end{solutionframe}
 
+\begin{frame}[fragile]{\texttt{Task}: What the Rest of .NET Speaks}
+  \framelabel{slide:task}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// A Task is a handle on work that is already running.
+Task<string> download = client.GetStringAsync(url);  // starts here
+string page = await download;                        // is waited for here
+
+await Task.Delay(500, token);                        // UniTask.Delay(500)
+string[] both = await Task.WhenAll(first, second);   // concurrently
+
+// Task.Run is the one that really uses another thread:
+Graph graph = await Task.Run(() => Parse(file));
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \textbf{You will read it more often than you write it.} File and
+      network APIs, NUnit and most libraries return \texttt{Task}, and awaiting
+      one is the same \texttt{await} you already know.
+    \item \textbf{\texttt{Task.Run} is for computation}, not for making
+      something asynchronous. It hands the delegate to the thread pool: real
+      parallelism, and the only good reason to reach for it.
+    \item \textbf{A \texttt{Task} is hot.} It is already running when you
+      receive it, and a failure surfaces only at the \texttt{await}: if nobody
+      awaits it, nobody learns that it failed.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{Task} in Unity}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async Task ShowAsync(string url)
+{
+  string text = await client.GetStringAsync(url);
+  label.text = text;             // fine: Unity's context brought us back
+}
+
+await LibraryCallAsync().ConfigureAwait(false);
+transform.position = Vector3.zero;  // not fine: not the main thread now
+
+await Task.Run(() => Parse(file));  // and never touch Unity in there
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item Unity installs a synchronisation context on the main thread, and
+      \texttt{await} posts the continuation back to it. That alone makes
+      \texttt{async Task} usable in a \texttt{MonoBehaviour}.
+    \item \texttt{ConfigureAwait(false)} gives that up, and library code uses
+      it freely. After awaiting somebody else's \texttt{Task} you cannot assume
+      you are on the main thread.
+    \item A \texttt{Task} knows nothing of play mode: it runs on after the user
+      pressed stop, into objects that no longer exist. Pass
+      \texttt{destroyCancellationToken} and check it.
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{UniTask: Why Not \texttt{Task}?}
   \texttt{Task} was designed for servers: thread pools, work stealing, many
   cores. A game has one main thread, a few milliseconds per frame, and must not
@@ -737,16 +793,16 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
 
 \begin{frame}[fragile]{The UniTask Toolbox}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-await UniTask.Yield();                  // next frame
+await UniTask.Yield();                          // next frame
 await UniTask.NextFrame();
 await UniTask.Delay(500, cancellationToken: token);
 await UniTask.WaitUntil(() => ready, cancellationToken: token);
 
-await UniTask.WhenAll(taskA, taskB);    // both, concurrently
+await UniTask.WhenAll(taskA, taskB);            // both, concurrently
 (a, b) = await UniTask.WhenAll(taskA, taskB);   // and their results
 
-await UniTask.SwitchToThreadPool();     // leave the main thread
-await UniTask.SwitchToMainThread();     // and come back
+await UniTask.SwitchToThreadPool();             // leave the main thread
+await UniTask.SwitchToMainThread();             // and come back
 
 await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
   \end{lstlisting}
