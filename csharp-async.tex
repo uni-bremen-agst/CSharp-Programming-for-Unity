@@ -428,8 +428,8 @@ catch (IOException) { ... }   // Load returned before throwing
       unhandled exceptions somewhere else entirely, or vanish.
     \item Use \texttt{async UniTask} instead. Where you genuinely want to
       start something and not wait, say so explicitly with
-      \texttt{UniTaskVoid} and \texttt{Forget()}
-      (\slideref{slide:forget}).
+      \texttt{UniTaskVoid} and \texttt{Forget()} --- \emph{I know that nobody
+      waits for this} (\slideref{slide:forget}).
   \end{itemize}
 \end{frame}
 
@@ -904,8 +904,11 @@ private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
     \item \texttt{UniTaskVoid} is the honest \texttt{async void}: it cannot be
       awaited either, but it says so in the signature, and \texttt{Forget()}
       makes the decision visible at the call site.
-    \item \texttt{Forget()} also routes exceptions to UniTask's handler
-      instead of dropping them, so a failure still appears in the console.
+    \item On a \texttt{UniTaskVoid} that is all \texttt{Forget()} does: it is
+      an empty method, and the exception is routed by the state machine itself.
+      On a \texttt{UniTask} it observes the result. Either way a failure
+      reaches \texttt{UniTaskScheduler} and the console, while a cancellation
+      is dropped in silence.
     \item Reach for it only where nobody could sensibly wait --- a
       notification, a fading highlight. Never for something whose result
       matters.
