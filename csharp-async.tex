@@ -563,6 +563,64 @@ cancellationTokenSource = new CancellationTokenSource();
   cancellation everywhere else.}
 \end{frame}
 
+\begin{frame}[fragile]{Cancelled: Throw or Return?}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// The normal case: the caller must not mistake this for a finished job.
+token.ThrowIfCancellationRequested();
+
+// The same thing, written out. Naming the token matters: without it,
+// nobody can tell whose cancellation this was.
+if (token.IsCancellationRequested)
+{
+  throw new OperationCanceledException(token);
+}
+
+// Returning is right only where the contract promises partial work:
+if (token.IsCancellationRequested) { return builtSoFar; }
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \textbf{Throw by default.} \texttt{UniTask} and \texttt{Task} record
+      an \texttt{OperationCanceledException} as \emph{cancelled}, not as
+      failed, and \texttt{await} rethrows it for the caller to see.
+    \item \textbf{Return only where nobody is misled}, as in a
+      \texttt{UniTaskVoid} nobody awaits (\slideref{slide:forget}). A silent
+      \texttt{return} that looks like success is how a half-loaded graph
+      reaches the screen.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Where to Check, What to Clean Up}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+GameObject spinner = ShowSpinner();
+try
+{
+  foreach (Node node in graph.Nodes())   // once per node, not per byte
+  {
+    token.ThrowIfCancellationRequested();
+    await FetchAsync(node.ID, token);    // handed on: no check needed
+  }                                      // around the await itself
+}
+finally
+{
+  Destroyer.Destroy(spinner);            // runs when cancelled, too
+  await SaveDraftAsync(CancellationToken.None);   // a cancelled token
+}                                                 // would cancel this
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \textbf{Check as often as the user would notice}: once per unit of
+      work --- a node, an XML element, a file. Once at the start is decoration,
+      once per byte is waste.
+    \item \textbf{Let \texttt{finally} do the cleaning}: the exception travels
+      through it, so the spinner goes either way, and so does the switch back
+      to the main thread (\slideref{slide:mainthread}).
+    \item \textbf{Last wishes need a live token}, never the one that was just
+      cancelled.
+  \end{itemize}
+\end{frame}
+
 \begin{exerciseframe}{Make It Cancellable}
   This runs to the end even after the user has closed the city. Add
   cooperative cancellation, and explain who owns the source.
@@ -702,6 +760,7 @@ await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
 \end{frame}
 
 \begin{frame}[fragile]{Leaving and Returning to the Main Thread}
+  \framelabel{slide:mainthread}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/DataModel/DG/IO/GXLParser.cs
 try
