@@ -1,17 +1,18 @@
 %%% -*- coding: utf-8 -*-
-
+% !TeX root = main-slides.tex
 
 %%% There is exactly one section per lecture, hence this lists all lectures.
 \begin{frame}{Lectures}
   \tableofcontents[hideallsubsections]
 \end{frame}
 
-\input{overview}
-\input{csharp-basics}
-\input{csharp-linq}
-\input{csharp-reflection}
-\input{csharp-async}
-\input{csharp-nunit}
+%\input{overview}
+%\input{csharp-basics}
+%\input{csharp-linq}
+%\input{csharp-reflection}
+%\input{csharp-async}
+%\input{csharp-nunit}
+\input{unity-basics}
 
 \endinput
 
@@ -27,7 +28,7 @@ Part B — Advanced C#
 %Asynchronous programming: async/await, Task, cancellation tokens
 %UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
 %Delegates, events, and the observer pattern (heavily used for decoupled game-state notifications)
-Reflection & attributes (custom attributes drive serialization/config in DataModel/DG)
+%Reflection & attributes (custom attributes drive serialization/config in DataModel/DG)
 %Design patterns: Factory, Strategy, Command (action system in Controls/Actions)
 Generics & constraints for reusable algorithms
 Memory management & performance: structs vs. classes, boxing, allocation avoidance in per-frame code
@@ -37,6 +38,7 @@ Part C — Basic Unity
 Unity Editor workflow: scenes, prefabs, GameObjects, components
 MonoBehaviour lifecycle (Awake, Start, Update, coroutines)
 Transform hierarchy, parenting, prefab variants
+
 ScriptableObjects for data-driven configuration
 Unity's new Input System (com.unity.inputsystem) — actions, bindings, multiple control schemes
 UI Toolkit / uGUI basics for in-game panels and charts
