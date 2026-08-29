@@ -1,4 +1,5 @@
 %%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
 
 \lecture{Unity Basics}{unity-basics}
 \section{Unity Basics}
@@ -16,7 +17,8 @@
 
   \begin{itemize}
     \item A \emph{GameObject} is an empty shell: a name, a \texttt{Transform}
-      and nothing else. By itself it does nothing at all.
+      and nothing else. By itself it does nothing at all. It may have one parent
+      and it may have children.
     \item A \emph{component} is what gives it data or behaviour. A
       \texttt{Renderer} draws it, a \texttt{Collider} makes it solid, and a
       \texttt{MonoBehaviour} of your own runs code on it.
@@ -32,16 +34,45 @@
       is used to refer to the underlying graph node/edge.}
 \end{frame}
 
+\begin{frame}[fragile]{Every GameObject Has a Transform}
+  \framelabel{slide:transform}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Transform t = gameObject.transform;   // always there, cannot be removed
+GameObject back = t.gameObject;       // and back again
+
+t.localPosition = new Vector3(0, 1, 0);   // local space, relative to parent
+Vector3 world = t.position;               // world space, absolute
+
+Transform parent = t.parent;          // null for a root object
+int children = t.childCount;
+foreach (Transform child in t)        // it enumerates its children
+{
+    Debug.Log($"{child.name}\n");
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The \texttt{Transform} is the one component every GameObject has and
+      none can do without. It holds two things at once: where the object is,
+      and where it sits in the hierarchy --- the editor's hierarchy window
+      \emph{is} that tree.
+    \item A GameObject has at most one parent and any number of children, and
+      a parent owns its subtree: destroying it destroys the children,
+      deactivating it deactivates them.
+  \end{itemize}
+\end{frame}
+
 \begin{frame}[fragile]{Getting at the Components}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Game/SceneManipulation/GameNodeMover.cs
-Node node = child.GetComponent<NodeRef>().Value;   // null if not attached
+// Assets/SEE/GameObjects/GameObjectExtensions.cs
+Node node = gameNode.GetNode();  // executes GetComponent<NodeRef>().Value
+Edge edge = gameEdge.GetEdge();  // both throw if the ref is missing
 
 if (gameObject.TryGetComponent(out Renderer renderer))   // the safe form
 {
     renderer.enabled = false;
 }
-
 // Assets/SEE/Game/Drawable/BlinkEffect.cs
 Renderer[] all = obj.GetComponentsInChildren<Renderer>();  // whole subtree
 BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
@@ -50,18 +81,20 @@ BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
 
   \begin{itemize}
     \item \texttt{GetComponent} looks at one GameObject only and yields
-      \texttt{null} if nothing is there; the \texttt{InChildren} and
-      \texttt{InParent} variants walk the hierarchy instead.
+      \texttt{null} if nothing is there; \texttt{InChildren} and
+      \texttt{InParent} walk the hierarchy.
     \item Unity overloads \texttt{==} for its \texttt{Object}: a destroyed
       object compares equal to \texttt{null} while the C\# reference still
       exists. \texttt{?.} and \texttt{??} do not know that and will happily
       call into a dead object.
+    \item In SEE, never write \texttt{GetComponent<NodeRef>().Value}: use
+      \texttt{GetNode}/\texttt{GetEdge}, or \texttt{TryGetNode}/%
+      \texttt{TryGetEdge} when absence is normal.
   \end{itemize}
 \end{frame}
 
 \begin{exerciseframe}{A Node Prefab}
-  Open \texttt{Assets/Scenes/Empty.unity} and build a miniature of what SEE
-  draws:
+  Create a new empty scene and build a miniature of what SEE draws:
   \vspace{1ex}
 
   \begin{enumerate}
@@ -70,8 +103,8 @@ BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
       inspector without making the field public.
     \item Save the cube as a prefab and place three instances in the scene,
       each with a different label, one of them tinted red.
-    \item \texttt{NodeMarker} logs its label once at start-up, and clicking
-      the message in the console selects the object it came from.
+    \item \texttt{NodeMarker} logs its label once at start-up method \texttt{void Start()},
+    and clicking the message in the console selects the object it came from.
   \end{enumerate}
   \vspace{1ex}
 
@@ -85,10 +118,10 @@ public class NodeMarker : MonoBehaviour
 {
     [SerializeField] private string label = "unnamed";   // visible, private
 
-    private void Start()
+    private void Start() // will be called by Unity; should be private
     {
         bool drawn = TryGetComponent(out Renderer _);
-        Debug.Log($"{name}: label={label}, drawn={drawn}", this);
+        Debug.Log($"{name}: label={label}, drawn={drawn}\n", this);
     }
 }
   \end{lstlisting}
@@ -112,9 +145,9 @@ public class NodeMarker : MonoBehaviour
 Awake()        // once, as the object comes into existence
 OnEnable()     // every time it becomes enabled
 Start()        // once, before the first Update, only if enabled
-FixedUpdate()  // per physics step: zero, one or many times per frame
 Update()       // once per frame -- Time.deltaTime is how long the last took
 LateUpdate()   // after every Update; cameras follow here
+FixedUpdate()  // per physics step: zero, one or many times per frame
 OnDisable()    // becomes disabled, or is about to be destroyed
 OnDestroy()    // once, at the very end
   \end{lstlisting}
@@ -128,6 +161,8 @@ OnDestroy()    // once, at the very end
       inactive GameObject postpones it. \texttt{Start} waits for enabled.
     \item Never write a constructor. Unity creates components for you, off the
       main thread's usual rules, and a constructor cannot touch the scene.
+    \item Full details at:\\
+    {\footnotesize \url{https://docs.unity3d.com/6000.5/Documentation/Manual/execution-order.html}}.
   \end{itemize}
 \end{frame}
 
@@ -250,14 +285,13 @@ private void OnDisable()                // a disabled component keeps its
   \end{lstlisting}
 \end{solutionframe}
 
-\begin{frame}[fragile]{The Transform Hierarchy}
+\begin{frame}[fragile]{Reparenting}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Game/SceneManipulation/GameNodeMover.cs
 public static void SetParent(GameObject child, GameObject newParent)
 {
-    child.GetComponent<NodeRef>().Value.Reparent(          // in the graph
-        newParent.GetComponent<NodeRef>().Value);
-    child.transform.SetParent(newParent.transform);        // in the scene
+    child.GetNode().Reparent(newParent.GetNode());   // in the graph
+    child.transform.SetParent(newParent.transform);  // in the scene
 }
 
 transform.SetParent(parent);        // keeps the world pose, rewrites local
@@ -266,13 +300,14 @@ transform.SetParent(parent, false); // keeps the local values, moves it
   \vspace{1ex}
 
   \begin{itemize}
-    \item There is no separate scene tree: the hierarchy \emph{is} the
-      \texttt{Transform} hierarchy. \texttt{localPosition} is measured in the
-      parent's frame, \texttt{position} in the world's, and the parent's scale
-      and rotation are folded into every child below it.
-    \item A parent owns its subtree. Destroying it destroys the children,
-      deactivating it deactivates them --- their \texttt{activeSelf} stays
-      \texttt{true} while \texttt{activeInHierarchy} turns \texttt{false}.
+    \item A new parent cannot leave both coordinate spaces alone:
+      \texttt{localPosition} lives in local space, \texttt{position} in world
+      space, and the parent's scale and rotation are folded into everything
+      below it. The second argument picks which of the two is kept.
+    \item SEE reparents twice, because the city mirrors a graph: once in the
+      graph with \texttt{Node.Reparent}, once in the scene with
+      \texttt{Transform.SetParent}. Doing only half of it is a bug that
+      surfaces much later.
   \end{itemize}
 \end{frame}
 
