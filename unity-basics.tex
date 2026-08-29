@@ -1,0 +1,340 @@
+%%% -*- coding: utf-8 -*-
+
+\lecture{Unity Basics}{unity-basics}
+\section{Unity Basics}
+
+\showtitlepage{Scenes, Components, Lifecycle}
+
+%%% Every example is taken from SEE, so the sources named in the listings can
+%%% be opened next to the slide.
+
+\begin{frame}{A Scene Is Assembled, Not Constructed}
+  In an ordinary C\# program you decide in code which objects exist. In Unity
+  most of them exist because somebody placed them in a scene and saved it:
+  \texttt{Assets/Scenes/SEEStart.unity} is such a file.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item A \emph{GameObject} is an empty shell: a name, a \texttt{Transform}
+      and nothing else. By itself it does nothing at all.
+    \item A \emph{component} is what gives it data or behaviour. A
+      \texttt{Renderer} draws it, a \texttt{Collider} makes it solid, and a
+      \texttt{MonoBehaviour} of your own runs code on it.
+    \item A \emph{prefab} is a GameObject with its components and children
+      saved as an asset, so that one scene can hold many instances of it and
+      one edit can change them all.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Nodes and edges of a dependency graph are represented as GameObjects in a code city.
+      They are procedurally generated along with their necessary components.
+      Their \texttt{NodeRef} or \texttt{EdgeRef} component, respectively,
+      is used to refer to the underlying graph node/edge.}
+\end{frame}
+
+\begin{frame}[fragile]{Getting at the Components}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/SceneManipulation/GameNodeMover.cs
+Node node = child.GetComponent<NodeRef>().Value;   // null if not attached
+
+if (gameObject.TryGetComponent(out Renderer renderer))   // the safe form
+{
+    renderer.enabled = false;
+}
+
+// Assets/SEE/Game/Drawable/BlinkEffect.cs
+Renderer[] all = obj.GetComponentsInChildren<Renderer>();  // whole subtree
+BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{GetComponent} looks at one GameObject only and yields
+      \texttt{null} if nothing is there; the \texttt{InChildren} and
+      \texttt{InParent} variants walk the hierarchy instead.
+    \item Unity overloads \texttt{==} for its \texttt{Object}: a destroyed
+      object compares equal to \texttt{null} while the C\# reference still
+      exists. \texttt{?.} and \texttt{??} do not know that and will happily
+      call into a dead object.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{A Node Prefab}
+  Open \texttt{Assets/Scenes/Empty.unity} and build a miniature of what SEE
+  draws:
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item A cube named \texttt{Node}, carrying a component
+      \texttt{NodeMarker} of your own with a label that you can type in the
+      inspector without making the field public.
+    \item Save the cube as a prefab and place three instances in the scene,
+      each with a different label, one of them tinted red.
+    \item \texttt{NodeMarker} logs its label once at start-up, and clicking
+      the message in the console selects the object it came from.
+  \end{enumerate}
+  \vspace{1ex}
+
+  Then change the scale of the cube in the prefab asset. Which of your three
+  instances follow, and which do not? Why?
+\end{exerciseframe}
+
+\begin{solutionframe}{A Node Prefab}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public class NodeMarker : MonoBehaviour
+{
+    [SerializeField] private string label = "unnamed";   // visible, private
+
+    private void Start()
+    {
+        bool drawn = TryGetComponent(out Renderer _);
+        Debug.Log($"{name}: label={label}, drawn={drawn}", this);
+    }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{[SerializeField]} is what makes a private field appear in
+      the inspector and be saved with the scene. Making it public would do
+      the same, and would also let every other class write it.
+    \item The second argument of \texttt{Debug.Log} is the \emph{context}
+      object: the console highlights it when you click the message.
+    \item All three instances grow, except where you overrode the value.
+      Tinting one red overrides its material only; scale was never overridden,
+      so it still comes from the asset.
+  \end{itemize}
+\end{solutionframe}
+
+\begin{frame}[fragile]{The \texttt{MonoBehaviour} Lifecycle}
+  \framelabel{slide:lifecycle}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Awake()        // once, as the object comes into existence
+OnEnable()     // every time it becomes enabled
+Start()        // once, before the first Update, only if enabled
+FixedUpdate()  // per physics step: zero, one or many times per frame
+Update()       // once per frame -- Time.deltaTime is how long the last took
+LateUpdate()   // after every Update; cameras follow here
+OnDisable()    // becomes disabled, or is about to be destroyed
+OnDestroy()    // once, at the very end
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Every \texttt{Awake} in the scene runs before any \texttt{Start}.
+      That is the rule the split exists for: find yourself in \texttt{Awake},
+      reach for others in \texttt{Start}.
+    \item \texttt{Awake} runs even when the component is disabled; only an
+      inactive GameObject postpones it. \texttt{Start} waits for enabled.
+    \item Never write a constructor. Unity creates components for you, off the
+      main thread's usual rules, and a constructor cannot touch the scene.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Coroutines}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Drawable/BlinkEffect.cs
+public IEnumerator Blink()
+{
+    while (loopOn)                        // an ordinary loop, except that
+    {                                     // it survives across frames
+        renderer.enabled = false;
+        yield return new WaitForSeconds(0.2f);
+        renderer.enabled = true;
+        yield return new WaitForSeconds(0.5f);
+    }
+}
+...
+StartCoroutine(Blink());                  // BlinkEffect does this in Start()
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item A coroutine is a method returning \texttt{IEnumerator}. Each
+      \texttt{yield return} hands control back: \texttt{null} resumes next
+      frame, \texttt{WaitForSeconds} after scaled time,
+      \texttt{WaitForSecondsRealtime} regardless of \texttt{Time.timeScale}.
+    \item It is not a thread. It runs on the main thread between frames, so it
+      may touch the scene freely --- and it dies with its GameObject:
+      deactivating the object stops it for good, disabling only the component
+      does not stop it at all.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Predict the Order}
+  Two GameObjects, \texttt{A} and \texttt{B}, each carry a component that logs
+  every one of \texttt{Awake}, \texttt{OnEnable}, \texttt{Start} and the first
+  \texttt{Update}. The component on \texttt{A} holds a reference to \texttt{B}.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item Both are active when the scene loads. Which of the eight messages
+      have a guaranteed order, and which do not?
+    \item \texttt{B} is inactive when the scene loads, and \texttt{A} calls
+      \texttt{b.SetActive(true)} in its \texttt{Start}. Now what is the order?
+    \item \texttt{A} wants to read a value that \texttt{B} computes for
+      itself. In which method does each of the two belong?
+  \end{enumerate}
+  \vspace{1ex}
+
+  \hint{The lifecycle is on \slideref{slide:lifecycle}.}
+\end{exerciseframe}
+
+\begin{solutionframe}{Predict the Order}
+  \begin{enumerate}
+    \item \texttt{A.Awake} and \texttt{B.Awake} both precede
+      \texttt{A.Start} and \texttt{B.Start}, which both precede either
+      \texttt{Update}. Between \texttt{A} and \texttt{B} nothing is
+      guaranteed: script execution order is arbitrary unless you configure it,
+      and code that depends on it breaks when a scene is rebuilt.
+    \item \texttt{A.Awake}, \texttt{A.OnEnable}, \texttt{A.Start}, then
+      \texttt{B.Awake} and \texttt{B.OnEnable} inside the
+      \texttt{SetActive} call, then \texttt{B.Start} --- still in the same
+      frame, before any \texttt{Update}.
+    \item \texttt{B} computes it in \texttt{Awake}, \texttt{A} reads it in
+      \texttt{Start}. That pair is ordered by the engine, so it holds however
+      the two objects happen to be visited.
+  \end{enumerate}
+\end{solutionframe}
+
+\begin{exerciseframe}{Blink Without an \texttt{Update}}
+  This works, but it counts time by hand and runs code every single frame to
+  do something twice a second:
+  \vspace{1ex}
+
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private float elapsed;
+private bool visible = true;
+
+private void Update()
+{
+    elapsed += Time.deltaTime;
+    if (elapsed >= 0.5f)
+    {
+        elapsed = 0.0f;
+        visible = !visible;
+        GetComponent<Renderer>().enabled = visible;
+    }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Rewrite it as a coroutine that is off for 0.2 and on for 0.5 seconds, as
+  \texttt{BlinkEffect} does. Leave the object visible when the component is
+  switched off.
+\end{exerciseframe}
+
+\begin{solutionframe}{Blink Without an \texttt{Update}}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private Renderer objectRenderer;
+private void Start()
+{
+    objectRenderer = GetComponent<Renderer>();
+    StartCoroutine(Blink());            // once; no per-frame work is left
+}
+private IEnumerator Blink()
+{
+    while (true)                        // the component's life bounds it
+    {
+        objectRenderer.enabled = false;
+        yield return new WaitForSeconds(0.2f);
+        objectRenderer.enabled = true;
+        yield return new WaitForSeconds(0.5f);
+    }
+}
+private void OnDisable()                // a disabled component keeps its
+{                                       // coroutines running, so stop them
+    StopAllCoroutines();
+    objectRenderer.enabled = true;      // never leave it invisible
+}
+  \end{lstlisting}
+\end{solutionframe}
+
+\begin{frame}[fragile]{The Transform Hierarchy}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/SceneManipulation/GameNodeMover.cs
+public static void SetParent(GameObject child, GameObject newParent)
+{
+    child.GetComponent<NodeRef>().Value.Reparent(          // in the graph
+        newParent.GetComponent<NodeRef>().Value);
+    child.transform.SetParent(newParent.transform);        // in the scene
+}
+
+transform.SetParent(parent);        // keeps the world pose, rewrites local
+transform.SetParent(parent, false); // keeps the local values, moves it
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item There is no separate scene tree: the hierarchy \emph{is} the
+      \texttt{Transform} hierarchy. \texttt{localPosition} is measured in the
+      parent's frame, \texttt{position} in the world's, and the parent's scale
+      and rotation are folded into every child below it.
+    \item A parent owns its subtree. Destroying it destroys the children,
+      deactivating it deactivates them --- their \texttt{activeSelf} stays
+      \texttt{true} while \texttt{activeInHierarchy} turns \texttt{false}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Prefabs, Instances, Variants}
+  \begin{itemize}
+    \item The \emph{asset} is the original. An \emph{instance} in a scene
+      keeps a link to it, so a change to the asset reaches every instance.
+    \item An instance may deviate: any value you edit on it becomes an
+      \emph{override}, shown in bold in the inspector, and an override is
+      immune to later changes of that same value in the asset. \emph{Apply}
+      pushes it back into the asset, \emph{Revert} throws it away.
+    \item A \emph{variant} is a prefab whose base is another prefab. It is the
+      override idea made permanent and reusable: the variant records what
+      differs, everything else keeps following the base --- including
+      components added to the base afterwards.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{Copying a prefab and editing the copy looks easier and costs you the
+  link. The base can then be fixed a hundred times without the copy ever
+  noticing.}
+\end{frame}
+
+\begin{exerciseframe}{Reparent Without Moving}
+  \texttt{parent} sits at world position $(2, 0, 0)$ with scale $2$;
+  \texttt{child} sits at $(6, 0, 0)$ with scale $1$ and has no parent yet.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item After \texttt{child.transform.SetParent(parent.transform)}: what are
+      the child's \texttt{position}, \texttt{localPosition} and
+      \texttt{localScale}?
+    \item And after \texttt{SetParent(parent.transform, false)} instead?
+    \item \texttt{GameNodeMover.SetParent} does two things, not one. Which,
+      and what breaks if you forget either?
+    \item \texttt{Node.prefab} exists. The reflexion city needs the same node
+      in red with one extra component. Variant or copy, and what happens when
+      \texttt{Node.prefab} later gains a collider?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Reparent Without Moving}
+  \begin{enumerate}
+    \item \texttt{position} stays $(6, 0, 0)$ --- that is the point of the
+      one-argument form. To keep it, Unity rewrites the local values:
+      \texttt{localPosition} becomes $(2, 0, 0)$, because the child is $4$
+      world units past a parent scaled by $2$, and \texttt{localScale}
+      becomes $0.5$, so that the world scale is still $1$.
+    \item The local values are kept instead, so \texttt{localPosition} stays
+      $(6, 0, 0)$ and the child jumps to $2 + 2 \cdot 6 = (14, 0, 0)$ at
+      scale $2$. This is the form for UI and for freshly created children.
+    \item It reparents the graph node and the game object. Forget the graph
+      and the city redraws in the old shape; forget the transform and the
+      cube keeps hanging under its old neighbour.
+    \item A variant. A copy would take the collider only if somebody
+      remembers to add it there too.
+  \end{enumerate}
+\end{solutionframe}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
