@@ -1,4 +1,5 @@
 %%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
 
 \lecture{Asynchronous Computing in C\#}{async}
 \section{Asynchronous Computing in C\#}
@@ -449,7 +450,7 @@ private async void LoadGraph(DataPath path)
 private void Start()
 {
   LoadGraph(gxlPath);
-  Debug.Log($"{graph.NodeCount} nodes");   // NullReferenceException
+  Debug.Log($"{graph.NodeCount} nodes\n");   // NullReferenceException
 }
   \end{lstlisting}
 \end{exerciseframe}
@@ -464,7 +465,7 @@ private async UniTask LoadGraphAsync(DataPath path)
 private async UniTaskVoid Start()
 {
   await LoadGraphAsync(gxlPath);
-  Debug.Log($"{graph.NodeCount} nodes");   // now it is there
+  Debug.Log($"{graph.NodeCount} nodes\n");   // now it is there
 }
   \end{lstlisting}
   \vspace{1ex}
@@ -850,7 +851,7 @@ private async UniTask<int> CountAsync(GameObject root, string file)
 {
   await UniTask.SwitchToThreadPool();
   int lines = File.ReadAllLines(file).Length;
-  Debug.Log($"{root.name}: {lines} lines");
+  Debug.Log($"{root.name}: {lines} lines\n");
   return lines;
 }
   \end{lstlisting}
@@ -867,7 +868,7 @@ private async UniTask<int> CountAsync(GameObject root, string file)
   await UniTask.SwitchToThreadPool();
   int lines = File.ReadAllLines(file).Length;   // fine: pure .NET
   await UniTask.SwitchToMainThread();
-  Debug.Log($"{root.name}: {lines} lines");     // needs the main thread
+  Debug.Log($"{root.name}: {lines} lines\n");     // needs the main thread
   return lines;
 }
   \end{lstlisting}
