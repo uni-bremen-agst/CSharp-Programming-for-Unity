@@ -1,0 +1,257 @@
+%%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
+
+\lecture{Unity Features}{unity-features}
+\section{Unity Features}
+
+\showtitlepage{Physics, Materials, Rendering}
+
+%%% Every example is taken from SEE, so the sources named in the listings can
+%%% be opened next to the slide.
+
+\subsection{Physics}
+
+\begin{frame}[fragile]{Colliders: the Shape Physics Sees}
+  \framelabel{slide:colliders}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+BoxCollider box = obj.AddComponent<BoxCollider>();   // cheap: six planes
+MeshCollider hull = obj.AddComponent<MeshCollider>();// exact, but costly
+
+// Assets/SEE/Game/Layers.cs -- every query is filtered by layer
+gameObject.layer = LayerMask.NameToLayer("InteractableGraphObjects");
+LayerMask mask = Layers.GraphObjectsLayerMask;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item A \texttt{Renderer} decides what you see, a \texttt{Collider} what
+      physics can touch, and the two are independent. A collider without a
+      renderer is invisible but still in the way; a renderer without a
+      collider cannot be clicked.
+    \item SEE uses mostly \texttt{MeshCollider}, and \texttt{BoxCollider}
+      wherever a box will do --- if a node is rendered as a cuboid, a box is both cheaper
+      and exact.
+    \item Layers are the filter. SEE names five of them in
+      \texttt{Layers.cs} --- graph objects and auxiliary objects, each
+      interactable or not --- and exposes the matching \texttt{LayerMask}s.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Raycasting: What Is Under the Pointer?}
+  \framelabel{slide:raycasting}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/Raycasting.cs
+if (!IsMouseOverGUI()
+    && Physics.Raycast(UserPointsTo(), out RaycastHit hit,
+                       maxDistance, Layers.GraphObjectsLayerMask))
+{
+    ...                          // hit.collider, hit.point, hit.distance
+}
+
+// all hits along the ray, into a buffer that is kept between frames
+numberOfHits = Physics.RaycastNonAlloc(UserPointsTo(), hits,
+                                       maxDistance, mask);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item A ray is an origin and a direction. \texttt{UserPointsTo()} hides
+      whether that comes from the mouse or from an XR controller, so the same
+      selection code serves the desktop and the headset.
+    \item \texttt{RaycastAll} allocates a fresh array per call;
+      \texttt{RaycastNonAlloc} fills a buffer SEE keeps, so its loop is bounded
+      by \texttt{numberOfHits}.
+    \item Without the \texttt{IsMouseOverGUI()} guard a click on a menu would
+      also select the city behind it.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Click to Select}
+  Build the smallest possible version of SEE's node selection.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item A scene with a few cubes and a plane. On a left click, raycast from
+      the camera through the pointer and log the name of whatever was hit.
+    \item Put the cubes on a layer of their own and restrict the query to it,
+      so that clicking the plane hits nothing.
+    \item Two cubes overlap and you want the nearer one. What does
+      \texttt{Physics.Raycast} give you, and what would you need instead to
+      choose among all hits, as \texttt{RaycastLowestNode} does?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Click to Select}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private void Update()
+{
+    if (Input.GetMouseButtonDown(0)
+        && Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition),
+                           out RaycastHit hit, 100.0f, cubeMask))
+    {
+        Debug.Log($"{hit.collider.name} at {hit.point}\n", hit.collider);
+    }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \texttt{cubeMask} is a \texttt{LayerMask} field set in the inspector,
+      or \texttt{1 << LayerMask.NameToLayer("Nodes")} in code. Passing no mask
+      means \emph{everything}, the plane included.
+    \item \texttt{Physics.Raycast} already returns the \emph{nearest} hit, so
+      part three needs nothing extra. Choosing a different one --- the deepest
+      node rather than the closest surface --- is what forces
+      \texttt{RaycastNonAlloc} and a loop over all hits.
+  \end{itemize}
+\end{solutionframe}
+
+\subsection{Materials and Shaders}
+
+\begin{frame}[fragile]{A Material Is a Shader Plus Values}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Material m = new(Shader.Find("Universal Render Pipeline/Lit"));
+m.color = Color.red;              // a property of that shader
+m.SetFloat("_Metallic", 0.5f);    // by name: a string lookup every call
+
+// Assets/SEE/Game/Portal.cs -- the name is looked up once
+private const string portalPropertyName = "_Portal";
+private static readonly int portalProp =
+    Shader.PropertyToID(portalPropertyName);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The \emph{shader} is the program that runs on the GPU; the
+      \emph{material} is an instance of it with values filled in. Two red
+      cubes and two blue ones need one shader and two materials.
+    \item Shader properties are addressed by name, and Unity turns that name
+      into an integer. \texttt{Shader.PropertyToID} does it once into a
+      \texttt{static readonly int} --- the idiom SEE uses for
+      \texttt{\_Portal}, its own property that clips a city to its table.
+    \item Which shaders exist depends on the render pipeline:
+      \texttt{Universal Render Pipeline/Lit}, \texttt{Simple Lit} and
+      \texttt{Unlit} are URP's, and SEE adds its own under
+      \texttt{Shader Graphs/}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Sharing Beats Instancing}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/GameObjects/Factories/MaterialsFactory.cs
+public void SetSharedMaterial(Renderer renderer, int index)
+{
+    renderer.sharedMaterial = Get(Mathf.Clamp(index, 0, ...));
+}
+
+renderer.material.color = Color.red;        // clones the material, silently
+renderer.sharedMaterial = existingMaterial; // assigns the shared asset
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Reading \texttt{renderer.material} does not read: it \emph{clones}
+      on first access and hands you a private copy. One per object, no longer
+      batched together, and never freed by itself.
+    \item That is why \texttt{MaterialsFactory} builds one material per color
+      of a \texttt{ColorRange} up front and then only hands out indices. A
+      city of thousands of blocks draws with a handful of materials.
+    \item Editing a \texttt{sharedMaterial} in play mode edits the asset on
+      disk. It is the same trap as a \texttt{ScriptableObject}, and for the
+      same reason.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{One Red Cube, Then a Thousand}
+  \begin{enumerate}
+    \item Ten cubes share one material. Turn exactly one of them red at run
+      time. Then inspect the other nine and the material asset --- what
+      happened, and what would have happened had you written
+      \texttt{sharedMaterial} instead?
+    \item Now color a thousand cubes along a gradient from green to red,
+      without creating a thousand materials. How many do you need, and what
+      does each cube have to store?
+  \end{enumerate}
+  \vspace{1ex}
+
+  \hint{Part two is what a code city does for every metric it maps to color.}
+\end{exerciseframe}
+
+\begin{solutionframe}{One Red Cube, Then a Thousand}
+  \begin{itemize}
+    \item \texttt{renderer.material.color = Color.red} clones the material for
+      that one cube: the other nine keep the original and the asset on disk is
+      untouched. \texttt{renderer.sharedMaterial.color = Color.red} would have
+      turned all ten red --- and saved the change into the asset.
+    \item You need as many materials as you want distinguishable steps, not as
+      many as there are cubes. Build the gradient once, keep the materials in
+      an array, and give every cube an index into it; that is exactly
+      \texttt{MaterialsFactory} with its \texttt{ColorRange}. Each cube stores
+      an integer, and all cubes sharing a step still batch.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{The alternative is one material with per-instance data through a
+  \texttt{MaterialPropertyBlock}. It keeps a single material but gives up
+  static batching, so measure before choosing.}
+\end{solutionframe}
+
+\subsection{The Render Pipeline}
+
+\begin{frame}{The Pipeline Is an Asset, Too}
+  \begin{itemize}
+    \item URP --- the \emph{Universal Render Pipeline} --- replaces Unity's
+      built-in renderer with one you configure rather than compile. The
+      configuration is a \texttt{ScriptableObject}, so everything from
+      \slideref{slide:scriptableobject} applies.
+    \item SEE ships one pipeline asset per quality level, each with its own
+      renderer: \texttt{Fastest}, \texttt{Fast}, \texttt{Simple},
+      \texttt{Good}, \texttt{Beautiful}, \texttt{Fantastic}. Switching quality
+      switches the whole renderer, not just a few numbers.
+    \item Post-processing is a second asset: a \texttt{Volume} in the scene
+      points at a profile, \texttt{DefaultVolumeProfile} or SEE's
+      \texttt{BeautifyProfile}, and the effects come from there.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{A shader written for one pipeline does not work in another. An object
+  that turns magenta is almost always a material whose shader belongs to the
+  built-in pipeline, not to URP.}
+\end{frame}
+
+\begin{exerciseframe}{Magenta and Other Mysteries}
+  \begin{enumerate}
+    \item You import a free asset from the store and its objects come out
+      magenta. What happened, and what are the two ways to fix it?
+    \item Shadows should reach further in the VR build than on the desktop,
+      and nowhere else should change. Which file do you edit, and which do you
+      leave alone?
+    \item \texttt{Assets/Settings} holds a pipeline asset \emph{and} a forward
+      renderer per quality level. Why two files rather than one?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Magenta and Other Mysteries}
+  \begin{enumerate}
+    \item Magenta is Unity's error shader: the material asks for a shader that
+      the active pipeline does not provide, typically the built-in
+      \texttt{Standard}. Either upgrade the materials --- Unity has a
+      converter for it --- or replace the shader by
+      \texttt{Universal Render Pipeline/Lit} by hand.
+    \item The shadow distance lives in the pipeline asset of the quality level
+      the VR build runs at, so edit that one asset. The other five levels and
+      the scene stay untouched --- which is the point of having one asset per
+      level.
+    \item Because they answer different questions. The pipeline asset says
+      \emph{how much}: shadow distance, HDR, MSAA, render scale. The renderer
+      says \emph{how}: the passes and renderer features that produce a frame.
+      Several pipeline assets can point at the same renderer.
+  \end{enumerate}
+\end{solutionframe}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
