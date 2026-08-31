@@ -333,17 +333,17 @@ public class NodeMarker : MonoBehaviour
 \end{solutionframe}
 
 \begin{exerciseframe}{Variant or Copy?}
-  The player avatars live in \texttt{Resources/Prefabs/Players/CC4}: sixteen
-  characters --- \texttt{Caleb}, \texttt{Hanna}, \texttt{Karl} and the rest ---
-  over one \texttt{BaseAvatar}.
+  The player avatars live in \texttt{Resources/Prefabs/Players/CC4}: over a
+  dozen characters --- \texttt{Caleb}, \texttt{Hanna}, \texttt{Karl} and the
+  rest --- over one \texttt{BaseAvatar}.
   \vspace{1ex}
 
   \begin{enumerate}
     \item Make a variant of \texttt{BaseAvatar} of your own and give it another
       material. Then add a component to \texttt{BaseAvatar}. What does your
       variant do, and what would a duplicated copy have done?
-    \item One of the sixteen is \emph{not} a variant. How do you find out which
-      one, without opening all sixteen in the inspector?
+    \item One of them is \emph{not} a variant. How do you find out which one,
+      without opening every prefab in the inspector?
     \item Suppose the avatars all sit too low, and you raise the root position
       of \texttt{BaseAvatar} to fix them in one place. Open any variant's
       \texttt{.prefab} file in a text editor first, and predict whether your
@@ -362,13 +362,185 @@ public class NodeMarker : MonoBehaviour
       base, a plain prefab does not. Searching the folder for the GUID in
       \texttt{BaseAvatar.prefab.meta} settles it in one step:
       \texttt{Assistant.prefab} is the only file without it.
-    \item It will not arrive. All sixteen files already override the root
-      \texttt{m\_LocalPosition} --- every one of them to $(0, 0, 0)$ --- and an
+    \item It will not arrive. Every one of the files already overrides the root
+      \texttt{m\_LocalPosition} --- all of them to $(0, 0, 0)$ --- and an
       override is immune to a change of that same value in the base. A variant
       always records its own root transform, so this is the one property you
       can never fix centrally. The height has to go into each variant, below
       the root, or into the code that places the avatar.
   \end{enumerate}
+\end{solutionframe}
+
+\subsection{ScriptableObjects}
+
+\begin{frame}[fragile]{Data That Is Not in the Scene}
+  \framelabel{slide:scriptableobject}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[CreateAssetMenu(fileName = "CityTheme", menuName = "SEE/City Theme")]
+public class CityTheme : ScriptableObject   // no GameObject, no Transform
+{
+    public Color LeafColor = Color.white;
+    public float MinBlockHeight = 0.01f;
+}
+...
+CityTheme theme = Resources.Load<CityTheme>("Themes/Default");
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item A \texttt{ScriptableObject} is a serialized C\# object that lives as
+      an asset instead of on a GameObject. Every \texttt{.asset} file in the
+      project is an instance of one.
+    \item You reference it, you do not copy it: everybody who points at the
+      asset shares the one instance, so one edit reaches all of them --- and an
+      edit made while the game is running survives leaving play mode.
+    \item SEE declares none of its own, but depends on many: the URP
+      pipeline assets (\texttt{Fastest}, \texttt{Beautiful}, \texttt{Fantastic}),
+      \texttt{DefaultVolumeProfile}, \texttt{BeautifyProfile},
+      \texttt{TMP Settings}, and \texttt{SEENetworkPrefabs.asset}, which is
+      Netcode's prefab list.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{How SEE Configures Instead}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/EdgeSelectionAttributes.cs, cut to two settings
+[Serializable]
+public class EdgeSelectionAttributes : VisualAttributes
+{
+    public float Radius = 0.005f;
+    public bool AreSelectable = true;
+
+    private const string radiusLabel = "Radius";
+    private const string areSelectableLabel = "AreSelectable";
+
+    public override void Save(ConfigWriter writer, string label)
+    {
+        writer.BeginGroup(label);
+        writer.Save(Radius, radiusLabel);
+        writer.Save(AreSelectable, areSelectableLabel);
+        writer.EndGroup();
+    }
+    // Restore on the next slide
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  Every field needs three things: the field itself, a \texttt{const} label that
+  names it in the file, and a \texttt{writer.Save} call that pairs the two.
+\end{frame}
+
+\begin{frame}[fragile]{\ldots{} and Reads Them Back}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// the same class, continued: Restore is the mirror image of Save
+public override void Restore(Dictionary<string, object> attributes,
+                             string label)
+{
+    if (attributes.TryGetValue(label, out object group)
+        && group is Dictionary<string, object> values)
+    {
+        ConfigIO.Restore(values, radiusLabel, ref Radius);
+        ConfigIO.Restore(values, areSelectableLabel, ref AreSelectable);
+    }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{ConfigIO.Restore} assigns the field only when the label is
+      there, so an older file that does not mention a setting leaves its
+      default alone. That is what keeps the format readable across versions.
+    \item The two methods have to agree, label by label, and nothing checks
+      that they do. A \texttt{writer.Save} without its
+      \texttt{ConfigIO.Restore} writes a setting that is never read back ---
+      silently, and only in the next session.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Why Not a \texttt{ScriptableObject}, Then?}
+  \begin{itemize}
+    \item The settings are plain \texttt{[Serializable]} classes, held as
+      fields of the city component and written through a \texttt{ConfigWriter}
+      into a text file --- \texttt{StreamingAssets/UserSettings.cfg} holds
+      lines like \texttt{PlayerName : "Me";}
+    \item A \texttt{.cfg} is human-editable and diffs line by line in git,
+      while a \texttt{.asset} is Unity's own format --- and nobody can
+      configure a headless run by editing one.
+    \item The price is the code on the previous slide, once per settings class
+      and then once per field: a label, a \texttt{writer.Save} call and a
+      \texttt{ConfigIO.Restore} call, times twenty-odd settings classes.
+      Forget one and that setting silently stops being saved, which is why
+      there should be a test for every one of them.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Two Ways to Store a Setting}
+  A city needs three settings: the color of leaf nodes, a minimal block
+  height, and whether edges are animated. Build them twice.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item As a \texttt{ScriptableObject}: the class, one asset created from the
+      menu, and a \texttt{MonoBehaviour} that reads the asset and logs the
+      three values. Then change a value while the game runs --- what do you
+      find after you leave play mode?
+    \item In SEE's own style: a \texttt{[Serializable]} class deriving from
+      \texttt{VisualAttributes} with \texttt{Save} and \texttt{Restore}. Write
+      it out and read it back.
+  \end{enumerate}
+  \vspace{1ex}
+
+  Which of the two would you rather review in a pull request, and which would
+  you rather hand to somebody who starts SEE from the command line?
+\end{exerciseframe}
+
+\begin{solutionframe}{Two Ways to Store a Setting}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[CreateAssetMenu(fileName = "CityTheme", menuName = "SEE/City Theme")]
+public class CityTheme : ScriptableObject
+{
+    public Color LeafColor = Color.white;
+    public float MinBlockHeight = 0.01f;
+    public bool AnimateEdges;
+}
+
+public class ThemeUser : MonoBehaviour
+{
+    [SerializeField] private CityTheme theme;   // dragged in, or Resources
+    private void Start() => Debug.Log($"{theme.LeafColor}\n", this);
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The value you changed in play mode is still changed afterwards. An asset is
+  not a copy per run, and the editor writes it back to disk --- the classic
+  way to lose a setting without noticing.
+\end{solutionframe}
+
+\begin{solutionframe}{Two Ways to Store a Setting}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+[Serializable]
+public class ThemeAttributes : VisualAttributes
+{
+    public Color LeafColor = Color.white;      // and the other two
+    private const string leafColorLabel = "LeafColor";
+
+    public override void Save(ConfigWriter writer, string label)
+    {
+        writer.BeginGroup(label);
+        writer.Save(LeafColor, leafColorLabel);
+        writer.EndGroup();
+    }
+    // Restore reads attributes[label] back into the fields
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  The \texttt{.cfg} wins the review --- a diff shows which setting moved and to
+  what. It also wins the command line, because it can be edited without Unity.
+  What it costs is the hand-written \texttt{Save} and \texttt{Restore} for
+  every field, and that is exactly what a \texttt{ScriptableObject} would have
+  given you for free.
 \end{solutionframe}
 
 \endinput
