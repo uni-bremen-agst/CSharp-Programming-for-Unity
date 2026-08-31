@@ -72,16 +72,16 @@ t.Rotate(0, 45, 0);                  // 45 degrees about the y axis
 \begin{frame}[fragile]{Parents and Children}
     \framelabel{slide:hierarchy}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        Transform parent = t.parent;         // null for a root object
-        int children = t.childCount;
-        Transform first = t.GetChild(0);     // by index, in the order shown
-        foreach (Transform child in t)       // it enumerates its children
-        {
-            Debug.Log($"{child.name}\n");
-        }
+Transform parent = t.parent;         // null for a root object
+int children = t.childCount;
+Transform first = t.GetChild(0);     // by index, in the order shown
+foreach (Transform child in t)       // it enumerates its children
+{
+    Debug.Log($"{child.name}\n");
+}
 
-        t.localPosition = new Vector3(0, 1, 0);  // local space, relative to parent
-        Vector3 world = t.position;              // world space, absolute
+t.localPosition = new Vector3(0, 1, 0);  // local space, relative to parent
+Vector3 world = t.position;              // world space, absolute
     \end{lstlisting}
     \vspace{1ex}
 
@@ -101,9 +101,9 @@ t.Rotate(0, 45, 0);                  // 45 degrees about the y axis
 
 \begin{frame}[fragile]{Reparenting}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        transform.SetParent(null);          // no parent anymore
-        transform.SetParent(parent);        // keeps the world pose, rewrites local
-        transform.SetParent(parent, false); // keeps the local values, moves it
+transform.SetParent(null);          // no parent anymore
+transform.SetParent(parent);        // keeps the world pose, rewrites local
+transform.SetParent(parent, false); // keeps the local values, moves it
     \end{lstlisting}
     \vspace{1ex}
 
@@ -126,9 +126,12 @@ t.Rotate(0, 45, 0);                  // 45 degrees about the y axis
         the child's \texttt{position}, \texttt{localPosition} and
         \texttt{localScale}?
         \item And after \texttt{SetParent(parent.transform, false)} instead?
-        \item \texttt{Node.prefab} exists. The reflexion city needs the same node
-        in red with one extra component. Variant or copy, and what happens when
-        \texttt{Node.prefab} later gains a collider?
+        \item The player avatars live in
+        \texttt{Resources/Prefabs/Players/CC4}: \texttt{Caleb},
+        \texttt{Hanna}, \texttt{Karl} and a dozen more, all built on
+        \texttt{BaseAvatar}. A new character is needed --- same rig, same
+        components, a different look. Variant or copy, and what happens to
+        each when \texttt{BaseAvatar} later gains a component?
     \end{enumerate}
 \end{exerciseframe}
 
@@ -142,8 +145,10 @@ t.Rotate(0, 45, 0);                  // 45 degrees about the y axis
         \item The local values are kept instead, so \texttt{localPosition} stays
         $(6, 0, 0)$ and the child jumps to $2 + 2 \cdot 6 = (14, 0, 0)$ at
         scale $2$. This is the form for UI and for freshly created children.
-        \item A variant. A copy would take the collider only if somebody
-        remembers to add it there too.
+        \item A variant --- and that is what SEE does: fifteen of the sixteen
+        character prefabs are variants of \texttt{BaseAvatar.prefab} and pick
+        the new component up by themselves. \texttt{Assistant.prefab} is the
+        exception, a standalone prefab, so somebody has to remember it.
     \end{enumerate}
 \end{solutionframe}
 
