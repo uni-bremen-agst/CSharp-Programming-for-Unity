@@ -184,6 +184,31 @@ BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{SEE Has Its Own, and They Are the Ones to Use}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/GameObjects/GameObjectExtensions.cs -- all three are extensions
+// of GameObject, so they read like methods of it
+
+Renderer r = obj.MustGetComponent<Renderer>();  // throws, naming obj and T
+BlinkEffect b = obj.AddOrGetComponent<BlinkEffect>();  // adds it if absent
+
+if (!obj.TryGetComponentOrLog(out Interactable interactable))  // logs an
+{                                                              // error
+    return;                                                    // for you
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Each of the three replaces a pattern you would otherwise write by
+      hand, and each says what should happen when the component is missing:
+      throw, create it, or report and carry on.
+    \item Use them. They are the house style and their messages name the game
+      object and the component type, which a bare
+      \texttt{NullReferenceException} does not.
+  \end{itemize}
+\end{frame}
+
 \begin{frame}[fragile]{The \texttt{MonoBehaviour} Lifecycle}
     \framelabel{slide:lifecycle}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
