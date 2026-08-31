@@ -1374,6 +1374,120 @@ Sub
   method is virtual there and hiding one is not possible at all.}
 \end{solutionframe}
 
+\subsection{Generics}
+
+\begin{frame}[fragile]{Generics Are Reified, Not Erased}
+  \framelabel{slide:generics}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+List<int> numbers = new();   // really ints: no boxing, no Integer
+
+Type t = typeof(T);          // the actual type argument, at run time
+bool b = x is T;             // works
+T fresh = new T();           // legal -- with a new() constraint
+T[] array = new T[10];       // legal
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Java erases its type arguments: \texttt{List<String>} and
+      \texttt{List<Integer>} are one class at run time, \texttt{new T()} is
+      impossible, and a list of \texttt{int} boxes every element.
+    \item C\# keeps them. The runtime compiles a separate body for every value
+      type and shares one among all reference types, so \texttt{List<int>}
+      stores plain \texttt{int}s.
+    \item Because the type survives, \texttt{typeof(T)}, \texttt{is~T},
+      \texttt{default(T)} and \texttt{new T()} all mean something --- which is
+      why the reflection on \slideref{slide:typeobject} can work with generic
+      code at all.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Constraints: What You Promise About \texttt{T}}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+where T : GraphElement              // a base class: use its members
+where T : Component                 // Unity's Component
+where T : IPersistentConfigItem, new()  // an interface, and constructible
+where E : struct, IConvertible      // a value type -- the old way to say enum
+where T : class                     // any reference type
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Without a constraint a \texttt{T} is no more than an
+      \texttt{object}: you may pass it around and call
+      \texttt{ToString()} on it, and that is all.
+    \item Every constraint buys one thing. A base class or interface gives you
+      its members, \texttt{new()} lets you construct a \texttt{T},
+      \texttt{struct} and \texttt{class} settle boxing and nullability.
+    \item \texttt{where E : struct, IConvertible} is the idiom from before
+      C\# 7.3, still used in \texttt{ConfigIO.RestoreEnum}. Today one writes
+      \texttt{where E : Enum} and means it exactly.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{One Algorithm, Two Element Types}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/MergeDiffGraphExtension.cs
+private static void MergeGraphElements<T>(ISet<T> added, ISet<T> removed,
+        ISet<T> changed, Action<T> addToGraph, Graph baseline)
+    where T : GraphElement
+{
+    added.ForEach(e => e.SetToggle(ChangeMarkers.IsNew));   // needs the
+    ...                                                     // constraint
+}
+...
+MergeGraphElements(addedNodes, removedNodes, changedNodes, ...);  // nodes
+MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Drop the \texttt{where} and \texttt{SetToggle} stops compiling. The
+      constraint is what turns a method that shuffles sets into a graph
+      algorithm.
+    \item One body serves nodes and edges, and each call keeps its own type:
+      the \texttt{Action<T>} that adds to the graph is
+      \texttt{AddNode} in one case and \texttt{AddEdge} in the other, checked
+      at compile time.
+    \item The alternative --- parameters of type \texttt{GraphElement} and a
+      cast at every use --- gives up exactly that check.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Make It Generic}
+  \begin{enumerate}
+    \item Two methods differ only in their element type: one returns the
+      \texttt{Node} with the largest value of a metric, the other the
+      \texttt{Edge}. Merge them into one method. Which constraint do you need,
+      and what breaks without it?
+    \item \texttt{ConfigIO.RestoreList<T>} is declared \texttt{where T :
+      IPersistentConfigItem, new()} and its body says \texttt{T t = new();}.
+      It could have called \texttt{Activator.CreateInstance} instead --- why is
+      the constraint better?
+    \item \texttt{where E : struct, IConvertible} does not actually restrict
+      \texttt{E} to enumerations. Name a type that satisfies it and is not an
+      enum, and say what you would write today.
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Make It Generic}
+  \begin{enumerate}
+    \item \texttt{where T : GraphElement}, because the body has to read a
+      metric --- \texttt{TryGetNumeric} is declared on \texttt{Attributable},
+      inherited by \texttt{GraphElement}. Without the constraint \texttt{T} is
+      an \texttt{object} and no member of it is in scope.
+    \item Both construct a \texttt{T}, but \texttt{new()} is checked when the
+      code is compiled, and by the \emph{caller}: a type without a public
+      parameterless constructor cannot even be passed.
+      \texttt{Activator.CreateInstance} moves the same requirement to run time,
+      where it becomes an exception --- the trade-off of
+      \slideref{slide:typeobject} in miniature.
+    \item Any value type implementing \texttt{IConvertible} qualifies:
+      \texttt{int}, \texttt{double}, \texttt{bool}, \texttt{DateTime}. Since
+      C\# 7.3 the honest spelling is \texttt{where E : Enum}.
+  \end{enumerate}
+\end{solutionframe}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "main-slides"
