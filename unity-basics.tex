@@ -126,12 +126,6 @@ transform.SetParent(parent, false); // keeps the local values, moves it
         the child's \texttt{position}, \texttt{localPosition} and
         \texttt{localScale}?
         \item And after \texttt{SetParent(parent.transform, false)} instead?
-        \item The player avatars live in
-        \texttt{Resources/Prefabs/Players/CC4}: \texttt{Caleb},
-        \texttt{Hanna}, \texttt{Karl} and a dozen more, all built on
-        \texttt{BaseAvatar}. A new character is needed --- same rig, same
-        components, a different look. Variant or copy, and what happens to
-        each when \texttt{BaseAvatar} later gains a component?
     \end{enumerate}
 \end{exerciseframe}
 
@@ -145,10 +139,6 @@ transform.SetParent(parent, false); // keeps the local values, moves it
         \item The local values are kept instead, so \texttt{localPosition} stays
         $(6, 0, 0)$ and the child jumps to $2 + 2 \cdot 6 = (14, 0, 0)$ at
         scale $2$. This is the form for UI and for freshly created children.
-        \item A variant --- and that is what SEE does: fifteen of the sixteen
-        character prefabs are variants of \texttt{BaseAvatar.prefab} and pick
-        the new component up by themselves. \texttt{Assistant.prefab} is the
-        exception, a standalone prefab, so somebody has to remember it.
     \end{enumerate}
 \end{solutionframe}
 
@@ -274,7 +264,7 @@ OnDestroy()    // once, at the very end
     \end{enumerate}
 \end{solutionframe}
 
-\subsection{Pefabs}
+\subsection{Prefabs}
 
 \begin{frame}{Prefabs, Instances, Variants}
     \begin{itemize}
@@ -340,6 +330,43 @@ public class NodeMarker : MonoBehaviour
       Tinting one red overrides its material only; scale was never overridden,
       so it still comes from the asset.
   \end{itemize}
+\end{solutionframe}
+
+\begin{exerciseframe}{Variant or Copy?}
+  The player avatars live in \texttt{Resources/Prefabs/Players/CC4}: sixteen
+  characters --- \texttt{Caleb}, \texttt{Hanna}, \texttt{Karl} and the rest ---
+  over one \texttt{BaseAvatar}.
+  \vspace{1ex}
+
+  \begin{enumerate}
+    \item Make a variant of \texttt{BaseAvatar} of your own and give it another
+      material. Then add a component to \texttt{BaseAvatar}. What does your
+      variant do, and what would a duplicated copy have done?
+    \item One of the sixteen is \emph{not} a variant. How do you find out which
+      one, without opening all sixteen in the inspector?
+    \item One character stands too low in the scene. The fix could go on the
+      scene instance, on the variant, or on \texttt{BaseAvatar}. Which one, and
+      what does each choice mean for the other fifteen?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Variant or Copy?}
+  \begin{enumerate}
+    \item The variant picks the new component up by itself and keeps your
+      material, because an override wins over the base only for the one value
+      it overrides. A duplicated copy would keep the material too --- and
+      never hear about the component.
+    \item A variant's \texttt{.prefab} file begins with a
+      \texttt{PrefabInstance} whose \texttt{m\_SourcePrefab} is the GUID of its
+      base, a plain prefab does not. Searching the folder for the GUID in
+      \texttt{BaseAvatar.prefab.meta} settles it in one step:
+      \texttt{Assistant.prefab} is the only file without it.
+    \item If only that character sits wrong, fix its variant. If all of them
+      do, fix \texttt{BaseAvatar} and the fifteen variants follow --- but
+      \texttt{Assistant} will not, and neither will any scene instance whose
+      position somebody has already moved by hand, because that is an
+      override.
+  \end{enumerate}
 \end{solutionframe}
 
 \endinput
