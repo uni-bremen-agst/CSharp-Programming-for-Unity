@@ -344,9 +344,10 @@ public class NodeMarker : MonoBehaviour
       variant do, and what would a duplicated copy have done?
     \item One of the sixteen is \emph{not} a variant. How do you find out which
       one, without opening all sixteen in the inspector?
-    \item One character stands too low in the scene. The fix could go on the
-      scene instance, on the variant, or on \texttt{BaseAvatar}. Which one, and
-      what does each choice mean for the other fifteen?
+    \item Suppose the avatars all sit too low, and you raise the root position
+      of \texttt{BaseAvatar} to fix them in one place. Open any variant's
+      \texttt{.prefab} file in a text editor first, and predict whether your
+      fix will arrive.
   \end{enumerate}
 \end{exerciseframe}
 
@@ -361,11 +362,12 @@ public class NodeMarker : MonoBehaviour
       base, a plain prefab does not. Searching the folder for the GUID in
       \texttt{BaseAvatar.prefab.meta} settles it in one step:
       \texttt{Assistant.prefab} is the only file without it.
-    \item If only that character sits wrong, fix its variant. If all of them
-      do, fix \texttt{BaseAvatar} and the fifteen variants follow --- but
-      \texttt{Assistant} will not, and neither will any scene instance whose
-      position somebody has already moved by hand, because that is an
-      override.
+    \item It will not arrive. All sixteen files already override the root
+      \texttt{m\_LocalPosition} --- every one of them to $(0, 0, 0)$ --- and an
+      override is immune to a change of that same value in the base. A variant
+      always records its own root transform, so this is the one property you
+      can never fix centrally. The height has to go into each variant, below
+      the root, or into the code that places the avatar.
   \end{enumerate}
 \end{solutionframe}
 
