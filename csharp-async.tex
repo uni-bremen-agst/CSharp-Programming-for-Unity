@@ -205,11 +205,11 @@ yield break;                              // stop here
   \vspace{1ex}
 
   \begin{enumerate}
-    \item Fade a node's colour from red to green over two seconds.
+    \item Fade a node's color from red to green over two seconds.
     \item Read a 40\,MB GXL file from disk and build a graph from it.
     \item Compute the median of a list of floats.
     \item Download metrics from the Axivion dashboard over HTTP.
-    \item Wait until the user has closed a dialogue, then continue an action.
+    \item Wait until the user has closed a dialog, then continue an action.
   \end{enumerate}
   \vspace{1ex}
 
@@ -226,7 +226,7 @@ yield break;                              // stop here
       microseconds. Asynchrony would only add overhead.
     \item \textbf{Async.} Waiting for a server is the original use case, and
       the answer is a value.
-    \item \textbf{Either}, and in SEE async: the dialogue's result is a value,
+    \item \textbf{Either}, and in SEE async: the dialog's result is a value,
       and \texttt{await} keeps the action's code in one readable piece.
   \end{enumerate}
   \vspace{1ex}
@@ -397,7 +397,7 @@ Graph graph = awaiter.GetResult();        // the value, or a rethrow
       caller now, and resume later.
     \item \emph{Where} it resumes is decided by the awaited thing. In Unity,
       an awaited \texttt{Task} resumes on the main thread, because Unity
-      installs a synchronisation context that marshals it back.
+      installs a synchronization context that marshals it back.
     \item If you \texttt{await} something that never completes, nothing
       happens --- forever, and silently. No deadlock, no error.
   \end{itemize}
@@ -508,12 +508,12 @@ private async UniTaskVoid Start()
 
   \hint{The one who cancels may be a clock: \texttt{CancellationTokenSource.CancelAfter(\ldots)}
   gives every animation phase of \texttt{TransitionRenderer} 15 seconds, after
-  which its token is cancelled like any other.}
+  which its token is canceled like any other.}
 \end{frame}
 
 \begin{frame}[fragile]{Cancellation Is Cooperative}
   Nothing can abort a running method from outside. Cancellation is a
-  \emph{request} that the operation itself has to honour.
+  \emph{request} that the operation itself has to honor.
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -552,19 +552,19 @@ public override async UniTask<Graph> ProvideAsync
 // so the call above lands in the XML read loop of its base class, which does:
 token.ThrowIfCancellationRequested();            // at every XML node
 
-// Assets/SEE/Game/City/SEECity.cs -- on every reload, because a cancelled
-// source stays cancelled:
+// Assets/SEE/Game/City/SEECity.cs -- on every reload, because a canceled
+// source stays canceled:
 cancellationTokenSource.Cancel();                // stop the old load
 cancellationTokenSource = new CancellationTokenSource();
   \end{lstlisting}
   \vspace{0.5ex}
 
   \hint{The default of that parameter is \texttt{CancellationToken.None} --- a
-  token that can never be cancelled. Convenient in tests, a silent loss of
+  token that can never be canceled. Convenient in tests, a silent loss of
   cancellation everywhere else.}
 \end{frame}
 
-\begin{frame}[fragile]{Cancelled: Throw or Return?}
+\begin{frame}[fragile]{Canceled: Throw or Return?}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // The normal case: the caller must not mistake this for a finished job.
 token.ThrowIfCancellationRequested();
@@ -583,7 +583,7 @@ if (token.IsCancellationRequested) { return builtSoFar; }
 
   \begin{itemize}
     \item \textbf{Throw by default.} \texttt{UniTask} and \texttt{Task} record
-      an \texttt{OperationCanceledException} as \emph{cancelled}, not as
+      an \texttt{OperationCanceledException} as \emph{canceled}, not as
       failed, and \texttt{await} rethrows it for the caller to see.
     \item \textbf{Return only where nobody is misled}, as in a
       \texttt{UniTaskVoid} nobody awaits (\slideref{slide:forget}). A silent
@@ -605,8 +605,8 @@ try
 }
 finally
 {
-  Destroyer.Destroy(spinner);            // runs when cancelled, too
-  await SaveDraftAsync(CancellationToken.None);   // a cancelled token
+  Destroyer.Destroy(spinner);            // runs when canceled, too
+  await SaveDraftAsync(CancellationToken.None);   // a canceled token
 }                                                 // would cancel this
   \end{lstlisting}
 
@@ -618,11 +618,11 @@ finally
       through it, so the spinner goes either way, and so does the switch back
       to the main thread (\slideref{slide:mainthread}).
     \item \textbf{Last wishes need a live token}, never the one that was just
-      cancelled.
+      canceled.
   \end{itemize}
 \end{frame}
 
-\begin{exerciseframe}{Make It Cancellable}
+\begin{exerciseframe}{Make It Cancelable}
   This runs to the end even after the user has closed the city. Add
   cooperative cancellation, and explain who owns the source.
   \vspace{1ex}
@@ -639,7 +639,7 @@ private async UniTask AddMetricsAsync(Graph graph)
   \end{lstlisting}
 \end{exerciseframe}
 
-\begin{solutionframe}{Make It Cancellable}
+\begin{solutionframe}{Make It Cancelable}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
 {
@@ -689,7 +689,7 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
 {
-  using CancellationTokenSource deadline           // cancelled by either
+  using CancellationTokenSource deadline           // canceled by either
       = CancellationTokenSource.CreateLinkedTokenSource(token);
   deadline.CancelAfter(TimeSpan.FromSeconds(5));
   foreach (Node node in graph.Nodes())
@@ -702,7 +702,7 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
   \end{lstlisting}
 
   \begin{itemize}
-    \item \textbf{Link, do not replace.} \texttt{deadline.Token} is cancelled
+    \item \textbf{Link, do not replace.} \texttt{deadline.Token} is canceled
       by the caller \emph{or} by the timer, and carries both downwards; the
       \texttt{using} disposes that timer.
     \item \textbf{Tell the two apart.} In the \texttt{catch},
@@ -758,7 +758,7 @@ await Task.Run(() => Parse(file));  // and never touch Unity in there
   \vspace{0.5ex}
 
   \begin{itemize}
-    \item Unity installs a synchronisation context on the main thread, and
+    \item Unity installs a synchronization context on the main thread, and
       \texttt{await} posts the continuation back to it. That alone makes
       \texttt{async Task} usable in a \texttt{MonoBehaviour}.
     \item \texttt{ConfigureAwait(false)} gives that up, and library code uses
@@ -781,7 +781,7 @@ await Task.Run(() => Parse(file));  // and never touch Unity in there
       from a pool, so awaiting allocates essentially nothing --- which matters
       when it happens in \texttt{Update}.
     \item It is driven by Unity's player loop directly, with no
-      synchronisation context in between, and lets you pick the timing
+      synchronization context in between, and lets you pick the timing
       (\texttt{PlayerLoopTiming.Update}, \texttt{LateUpdate}, \ldots).
     \item It knows Unity: you can await an \texttt{AsyncOperation}, a
       \texttt{UnityWebRequest}, or a coroutine.
@@ -942,7 +942,7 @@ private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
 \end{frame}
 
 \begin{exerciseframe}{From Coroutine to UniTask}
-  Rewrite this coroutine as an asynchronous method that can be cancelled and
+  Rewrite this coroutine as an asynchronous method that can be canceled and
   reports whether the server answered.
   \vspace{1ex}
 

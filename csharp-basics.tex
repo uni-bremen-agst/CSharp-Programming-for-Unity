@@ -898,11 +898,11 @@ int odds = Sum(numbers, n => n % 2 != 0);    // 4
   \end{lstlisting}
   \vspace{2ex}
 
-  \hint{Passing behaviour instead of duplicating loops is the very shape behind
+  \hint{Passing behavior instead of duplicating loops is the very shape behind
   LINQ's \texttt{Where}.}
 \end{solutionframe}
 
-\begin{exerciseframe}{Behaviour as a Parameter}
+\begin{exerciseframe}{Behavior as a Parameter}
   Implement \texttt{Retry} so that it calls \texttt{attempt} at most
   \texttt{times} times and yields \texttt{true} as soon as one call succeeds.
   \vspace{1ex}
@@ -924,7 +924,7 @@ Console.WriteLine(Retry(2, succeedsOnThird));
   \end{lstlisting}
 \end{exerciseframe}
 
-\begin{solutionframe}{Behaviour as a Parameter}
+\begin{solutionframe}{Behavior as a Parameter}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 static bool Retry(int times, Func<bool> attempt)
 {
@@ -1303,7 +1303,7 @@ Derived
   \vspace{4ex}
 
   \hint{Resolution takes place at compile time on the static type. Extension
-  methods are therefore a poor fit wherever polymorphic behaviour is wanted.}
+  methods are therefore a poor fit wherever polymorphic behavior is wanted.}
 \end{solutionframe}
 
 \begin{frame}[fragile]{Virtual and Override}

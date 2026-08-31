@@ -612,7 +612,7 @@ public IEnumerator TestMenuOption1()
       \texttt{new WaitForSeconds(t)} waits \texttt{t} seconds of game time,
       \texttt{new WaitForEndOfFrame()} until after rendering.
     \item \texttt{[UnitySetUp]} and \texttt{[UnityTearDown]} are the coroutine
-      flavours of \texttt{[SetUp]} and \texttt{[TearDown]}; they too return
+      flavors of \texttt{[SetUp]} and \texttt{[TearDown]}; they too return
       \texttt{IEnumerator}.
   \end{itemize}
 \end{frame}
@@ -751,10 +751,10 @@ public void TestMissingFile()
   \end{lstlisting}
   \begin{itemize}
     \item Unity fails any test during which an error is logged, hence the
-      correct behaviour of the reader is what breaks the test.
+      correct behavior of the reader is what breaks the test.
     \item \texttt{LogAssert.Expect} is an assertion in both directions: it
       swallows that one message, and it fails the test if the message does not
-      appear. The specified behaviour is now fully covered.
+      appear. The specified behavior is now fully covered.
     \item \texttt{LogAssert} comes from \texttt{UnityEngine.TestTools}, not from
       NUnit.
   \end{itemize}
@@ -955,7 +955,7 @@ if (string.IsNullOrWhiteSpace(repo.AccessToken))
       The pane below shows the failed assertion and its stack trace for the test
       selected by a single click.
     \item Filter by name with the search box, or by result with the red, green
-      and grey toggles in the toolbar.
+      and gray toggles in the toolbar.
     \item \emph{Run All in Player} builds a player and runs the play-mode tests
       inside it --- the only way to catch what breaks outside the Editor.
   \end{itemize}
