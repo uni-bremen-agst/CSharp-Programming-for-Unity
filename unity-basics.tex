@@ -19,7 +19,7 @@
     \item A \emph{GameObject} is an empty shell: a name, a \texttt{Transform}
       and nothing else. By itself it does nothing at all. It may have one parent
       and it may have children.
-    \item A \emph{component} is what gives it data or behaviour. A
+    \item A \emph{component} is what gives it data or behavior. A
       \texttt{Renderer} draws it, a \texttt{Collider} makes it solid, and a
       \texttt{MonoBehaviour} of your own runs code on it.
     \item A \emph{prefab} is a GameObject with its components and children
@@ -39,32 +39,65 @@
 \begin{frame}[fragile]{Every GameObject Has a Transform}
   \framelabel{slide:transform}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-Transform t = gameObject.transform;   // always there, cannot be removed
-GameObject back = t.gameObject;       // and back again
+Transform t = gameObject.transform;  // always there, cannot be removed
+GameObject back = t.gameObject;      // and back again
 
-t.localPosition = new Vector3(0, 1, 0);   // local space, relative to parent
-Vector3 world = t.position;               // world space, absolute
+t.position = new Vector3(1.5f, 0, -3);   // x right, y up, z forward
+t.rotation = Quaternion.Euler(0, 90, 0); // a quarter turn about y
+t.localScale = new Vector3(2, 2, 2);     // twice as large in each axis
 
-Transform parent = t.parent;          // null for a root object
-int children = t.childCount;
-foreach (Transform child in t)        // it enumerates its children
-{
-    Debug.Log($"{child.name}\n");
-}
+Vector3 angles = t.eulerAngles;      // the same rotation as three angles
+t.Translate(0, 1, 0);                // one meter up
+t.Rotate(0, 45, 0);                  // 45 degrees about the y axis
   \end{lstlisting}
   \vspace{1ex}
 
   \begin{itemize}
     \item The \texttt{Transform} is the one component every GameObject has and
-      none can do without. It holds two things at once: where the object is,
-      and where it sits in the hierarchy --- the editor's hierarchy window
-      \emph{is} that tree.
-    \item A GameObject has at most one parent and any number of children, and
-      a parent owns its subtree: destroying it destroys the children,
-      deactivating it deactivates them.
+      none can do without. It holds three things and nothing else:
+      \emph{position}, \emph{rotation} and \emph{scale}.
+    \item Each of them is a triple over the axes $x$, $y$, $z$: $x$ to the
+      right, $y$ up, $z$ away from the viewer --- a left-handed system.
+    \item One unit is one meter. A cube of scale $1$ is a meter wide, and
+      physics, gravity and the VR headset all take that literally.
+    \item A rotation is stored as a \texttt{Quaternion}, not as three angles.
+      \texttt{eulerAngles} converts for you, but reading it back need not give
+      the numbers you wrote.
   \end{itemize}
 \end{frame}
 
+
+\subsection{Hierarchy}
+
+\begin{frame}[fragile]{Parents and Children}
+    \framelabel{slide:hierarchy}
+    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+        Transform parent = t.parent;         // null for a root object
+        int children = t.childCount;
+        Transform first = t.GetChild(0);     // by index, in the order shown
+        foreach (Transform child in t)       // it enumerates its children
+        {
+            Debug.Log($"{child.name}\n");
+        }
+
+        t.localPosition = new Vector3(0, 1, 0);  // local space, relative to parent
+        Vector3 world = t.position;              // world space, absolute
+    \end{lstlisting}
+    \vspace{1ex}
+
+    \begin{itemize}
+        \item The \texttt{Transform} carries the hierarchy as well as the pose.
+        There is no separate scene tree: the editor's hierarchy window
+        \emph{is} the \texttt{Transform} tree.
+        \item A GameObject has at most one parent and any number of children, and
+        a parent owns its subtree: destroying it destroys the children,
+        deactivating it deactivates them.
+        \item That is why the pose comes in two flavors. \texttt{localPosition}
+        and \texttt{localRotation} are measured in the parent's space,
+        \texttt{position} and \texttt{rotation} in the world's. Scale has no
+        world counterpart you may set: \texttt{localScale} is the only one.
+    \end{itemize}
+\end{frame}
 
 \begin{frame}[fragile]{Reparenting}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -93,8 +126,6 @@ foreach (Transform child in t)        // it enumerates its children
         the child's \texttt{position}, \texttt{localPosition} and
         \texttt{localScale}?
         \item And after \texttt{SetParent(parent.transform, false)} instead?
-        \item \texttt{GameNodeMover.SetParent} does two things, not one. Which,
-        and what breaks if you forget either?
         \item \texttt{Node.prefab} exists. The reflexion city needs the same node
         in red with one extra component. Variant or copy, and what happens when
         \texttt{Node.prefab} later gains a collider?
@@ -111,9 +142,6 @@ foreach (Transform child in t)        // it enumerates its children
         \item The local values are kept instead, so \texttt{localPosition} stays
         $(6, 0, 0)$ and the child jumps to $2 + 2 \cdot 6 = (14, 0, 0)$ at
         scale $2$. This is the form for UI and for freshly created children.
-        \item It reparents the graph node and the game object. Forget the graph
-        and the city redraws in the old shape; forget the transform and the
-        cube keeps hanging under its old neighbour.
         \item A variant. A copy would take the collider only if somebody
         remembers to add it there too.
     \end{enumerate}
@@ -154,14 +182,14 @@ BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
 \begin{frame}[fragile]{The \texttt{MonoBehaviour} Lifecycle}
     \framelabel{slide:lifecycle}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        Awake()        // once, as the object comes into existence
-        OnEnable()     // every time it becomes enabled
-        Start()        // once, before the first Update, only if enabled
-        Update()       // once per frame -- Time.deltaTime is how long the last took
-        LateUpdate()   // after every Update; cameras follow here
-        FixedUpdate()  // per physics step: zero, one or many times per frame
-        OnDisable()    // becomes disabled, or is about to be destroyed
-        OnDestroy()    // once, at the very end
+Awake()        // once, as the object comes into existence
+OnEnable()     // every time it becomes enabled
+Start()        // once, before the first Update, only if enabled
+Update()       // once per frame -- Time.deltaTime is how long the last took
+LateUpdate()   // after every Update; cameras follow here
+FixedUpdate()  // per physics step: zero, one or many times per frame
+OnDisable()    // becomes disabled, or is about to be destroyed
+OnDestroy()    // once, at the very end
     \end{lstlisting}
     \vspace{1ex}
 
