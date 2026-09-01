@@ -202,8 +202,8 @@ renderer.sharedMaterial = existingMaterial; // assigns the shared asset
   \begin{itemize}
     \item URP --- the \emph{Universal Render Pipeline} --- replaces Unity's
       built-in renderer with one you configure rather than compile. The
-      configuration is a \texttt{ScriptableObject}, so everything from
-      \slideref{slide:scriptableobject} applies.
+      configuration is a \texttt{ScriptableObject}, so everything said about
+      those applies here too.
     \item SEE ships one pipeline asset per quality level, each with its own
       renderer: \texttt{Fastest}, \texttt{Fast}, \texttt{Simple},
       \texttt{Good}, \texttt{Beautiful}, \texttt{Fantastic}. Switching quality
@@ -246,6 +246,73 @@ renderer.sharedMaterial = existingMaterial; // assigns the shared asset
       \emph{how much}: shadow distance, HDR, MSAA, render scale. The renderer
       says \emph{how}: the passes and renderer features that produce a frame.
       Several pipeline assets can point at the same renderer.
+  \end{enumerate}
+\end{solutionframe}
+
+\subsection{Per-Frame Code}
+
+\begin{frame}[fragile]{The Frame Budget and the Collector}
+  \framelabel{slide:perframe}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Drawable/BlinkEffect.cs -- (formerly) two allocations per blink
+while (loopOn)
+{
+    renderer.enabled = false;
+    yield return new WaitForSeconds(0.2f);   // a fresh object every time
+    renderer.enabled = true;
+    yield return new WaitForSeconds(0.5f);
+}
+
+// the wait objects are immutable, so one of each is enough
+private static readonly WaitForSeconds off = new(0.2f);
+private static readonly WaitForSeconds on = new(0.5f);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Allocating is cheap; collecting is not, and the collector runs when
+      it wants to, so the spike lands in a frame you did not choose --- out of
+      16\,ms at 60\,Hz, or 11\,ms in a headset at 90\,Hz.
+    \item The usual sources: \texttt{new} inside \texttt{Update} or a coroutine
+      loop, string interpolation, LINQ in a per-frame path, and any call
+      returning a fresh array, such as \texttt{GetComponentsInChildren}.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Find the Allocation}
+  \begin{enumerate}
+    \item \texttt{BlinkEffect} allocates twice per blink. Fix it, and say why
+      the fix is safe. Would the same fix be safe for
+      \texttt{WaitForSecondsRealtime}?
+    \item Which of these belong in an \texttt{Update}, and which do not?
+      A LINQ query over all nodes of the city;
+      \texttt{Debug.Log(\$"\ldots\{count\}\ldots")};
+      \texttt{GetComponentsInChildren<Renderer>()};
+      reading \texttt{transform.position}.
+    \item A colleague makes a rarely used class a \texttt{struct} "for
+      performance". What was bought, and what was risked?
+  \end{enumerate}
+  \vspace{1ex}
+
+  \hint{Every answer here is a measurement, not an opinion: the Profiler has a
+  \emph{GC Alloc} column.}
+\end{exerciseframe}
+
+\begin{solutionframe}{Find the Allocation}
+  \begin{enumerate}
+    \item Hoist both \texttt{WaitForSeconds} into fields. It is safe because
+      the object is immutable and merely read by the player loop. It is
+      \emph{not} safe for \texttt{WaitForSecondsRealtime}, which keeps the end
+      of its interval inside itself and has to be reset before reuse.
+    \item Only \texttt{transform.position} is fine --- a property read, no
+      allocation. The LINQ query allocates and is linear in the city;
+      \texttt{Debug.Log} builds a string, boxes the interpolated value and is
+      slow besides; \texttt{GetComponentsInChildren} returns a fresh array on
+      every call, so cache it.
+    \item Nothing measurable was bought: the method is cold, and the collector
+      never noticed it. What was risked is every copy trap that comes with a
+      value type --- the assignment that does not stick, and the compiler
+      refusing to let you write to a returned copy.
   \end{enumerate}
 \end{solutionframe}
 
