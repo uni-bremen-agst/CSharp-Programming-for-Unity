@@ -1407,7 +1407,7 @@ T[] array = new T[10];       // legal
 where T : GraphElement              // a base class: use its members
 where T : Component                 // Unity's Component
 where T : IPersistentConfigItem, new()  // an interface, and constructible
-where E : struct, IConvertible      // a value type -- the old way to say enum
+where E : struct, Enum              // a concrete enumeration type
 where T : class                     // any reference type
   \end{lstlisting}
   \vspace{1ex}
@@ -1419,9 +1419,10 @@ where T : class                     // any reference type
     \item Every constraint buys one thing. A base class or interface gives you
       its members, \texttt{new()} lets you construct a \texttt{T},
       \texttt{struct} and \texttt{class} settle boxing and nullability.
-    \item \texttt{where E : struct, IConvertible} is the idiom from before
-      C\# 7.3, still used in \texttt{ConfigIO.RestoreEnum}. Today one writes
-      \texttt{where E : Enum} and means it exactly.
+    \item Constraints combine, and sometimes must. \texttt{ConfigIO.RestoreEnum}
+      needs both halves of \texttt{struct, Enum}: \texttt{Enum.TryParse<E>}
+      demands a value type, and \texttt{Enum} alone would still admit
+      \texttt{System.Enum} itself.
   \end{itemize}
 \end{frame}
 
@@ -1464,9 +1465,6 @@ MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
       IPersistentConfigItem, new()} and its body says \texttt{T t = new();}.
       It could have called \texttt{Activator.CreateInstance} instead --- why is
       the constraint better?
-    \item \texttt{where E : struct, IConvertible} does not actually restrict
-      \texttt{E} to enumerations. Name a type that satisfies it and is not an
-      enum, and say what you would write today.
   \end{enumerate}
 \end{exerciseframe}
 
@@ -1482,9 +1480,6 @@ MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
       \texttt{Activator.CreateInstance} moves the same requirement to run time,
       where it becomes an exception --- the trade-off of
       \slideref{slide:typeobject} in miniature.
-    \item Any value type implementing \texttt{IConvertible} qualifies:
-      \texttt{int}, \texttt{double}, \texttt{bool}, \texttt{DateTime}. Since
-      C\# 7.3 the honest spelling is \texttt{where E : Enum}.
   \end{enumerate}
 \end{solutionframe}
 
