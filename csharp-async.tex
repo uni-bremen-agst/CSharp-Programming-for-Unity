@@ -993,6 +993,211 @@ private async UniTask<bool> PollServerAsync(CancellationToken token)
   \texttt{DelayType.DeltaTime}.}
 \end{solutionframe}
 
+\begin{frame}[fragile]{Two Threads, One Field}
+  \framelabel{slide:race}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private int parsed;    // written on the worker, read on the main thread
+private bool done;     // written last, read first
+private async UniTask LoadAsync(string file)
+{
+  await UniTask.SwitchToThreadPool();
+  parsed = CountLines(file);
+  done = true;
+}
+
+private void Update()
+{
+  if (done) { label.text = $"{parsed} lines"; }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The switch of \slideref{slide:mainthread} buys speed and creates this
+  hazard. \texttt{done} is written on the worker thread and read on the main
+  one with no synchronization, so compiler and CPU may keep it in a register:
+  \texttt{Update} can see \texttt{false} forever. And if it does see
+  \texttt{true}, \texttt{parsed} need not be written yet.
+\end{frame}
+
+\begin{frame}[fragile]{The Same Code Without a Shared Field}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private async UniTask LoadAsync(string file)
+{
+  await UniTask.SwitchToThreadPool();
+  int parsed = CountLines(file);     // a local, not a field
+  await UniTask.SwitchToMainThread();
+  label.text = $"{parsed} lines";    // main thread, nothing shared
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Both fields are gone. \texttt{parsed} became a local that only this
+      call can reach, and \texttt{done} disappeared entirely: it existed to
+      signal completion across threads, and \texttt{await} already does that.
+    \item No lock, no atomics, no reasoning about registers --- the race was
+      not hard to fix, it was avoidable.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Before reaching for a lock, ask whether the data needs to be a field
+  at all. The frames that follow are for the cases where it does.}
+\end{frame}
+
+\begin{frame}[fragile]{What \texttt{lock} Guarantees}
+  \framelabel{slide:lock}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+lock (gate) { Publish(data); }        // what you write
+
+object obj = gate;                    // what the compiler emits
+bool acquired = false;
+try
+{
+  Monitor.Enter(obj, ref acquired);
+  Publish(data);
+}
+finally
+{
+  if (acquired) { Monitor.Exit(obj); }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Two guarantees follow, and the second is the one that repairs
+  \slideref{slide:race}: at most one thread runs the body at a time, and
+  everything a thread wrote inside the lock is visible to the next thread
+  that enters it. A lock is a memory barrier, not just a turnstile.
+\end{frame}
+
+\begin{frame}[fragile]{Both Sides Take the Same Lock}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Avatars/BodyAnimator.cs
+private readonly object _lock = new();
+
+resultCallback: (PoseLandmarkerResult result, ...) =>
+{
+  lock (_lock)          // MediaPipe's own thread writes here
+  {
+    result.CloneTo(ref resultPoseLandmarker);
+  }
+}
+...
+lock (_lock)            // and the player loop reads here
+{
+  resultPoseLandmarker.CloneTo(ref snapshotResultPoseLandmarker);
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A lock protects an agreement about data, not a block of code. The callback
+  thread and the player loop are safe only because both enter
+  \texttt{\_lock}; a reader that skips it sees the problem of
+  \slideref{slide:race} again, however carefully the writer locks.
+\end{frame}
+
+\begin{frame}[fragile]{Choosing the Lock Object}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+private readonly object gate = new();   // private, readonly, dedicated
+
+lock (this) {...}          // strangers holding your object can lock it
+lock (typeof(City)) {...}  // one Type object, shared with all other code
+lock ("busy") {...}        // string literals are interned, hence shared
+lock (counter) {...}       // CS0185: not a reference type
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Dedicated means used for this one agreement only. Every further user
+      of the object is a further chance to deadlock.
+    \item \texttt{readonly} is not decoration: if the field can be reassigned,
+      two threads may lock two different objects and both walk in.
+    \item That value types are rejected is a courtesy of the compiler. Boxing
+      would give each thread a copy of its own, and the lock would protect
+      nothing.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Holding a Lock}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Thread A                      // Thread B
+lock (first)                     lock (second)
+{                                {
+  lock (second) { ... }            lock (first) { ... }
+}                                }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Two locks taken in opposite orders deadlock, and no amount of
+      testing finds that reliably. Fix one global order, or get by with a
+      single lock --- which is why locks are the exception in SEE.
+    \item Keep the body short, and never call code you do not control from
+      inside it: a callback may block, or take a second lock.
+    \item On the main thread a lock is a frame budget question. Waiting for a
+      lock a worker holds stalls the frame, so \texttt{BodyAnimator} does
+      nothing but copy inside it.
+    \item \texttt{Monitor} is re-entrant: the same thread may enter the same
+      lock again.
+    \item \texttt{await} inside \texttt{lock} does not compile (CS1996):
+      \texttt{Monitor.Exit} must run on the thread that entered, and a
+      continuation need not. \texttt{SemaphoreSlim.WaitAsync} is the
+      asynchronous alternative.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Prefer a Concurrent Collection}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/ThreadSafeHashSet.cs: a set from a dictionary
+private readonly ConcurrentDictionary<T, bool> content = new();
+public bool Add(T item) { return content.TryAdd(item, true); }
+
+// Assets/SEE/Tools/LSP/LSPHandler.cs: a hand-off queue
+private readonly ConcurrentQueue<PublishDiagnosticsParams>
+  unhandledDiagnostics = new();
+
+unhandledDiagnostics.Enqueue(diagnostics);        // the server's thread
+while (unhandledDiagnostics.TryDequeue(out PublishDiagnosticsParams d))
+{
+  yield return d;                                 // the main thread
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item These come before \texttt{lock}: a queue that one thread fills and
+      another drains needs no lock at all.
+    \item Atomic per operation is not atomic per sequence.
+      \texttt{TryAdd} is safe; \texttt{if (!s.Contains(x)) s.Add(x)} is a race
+      with a \texttt{Concurrent} type in it.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{The Cheapest Thread-Safety Is Not Sharing}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXLParser.cs, in essence
+try
+{
+  await UniTask.SwitchToThreadPool();
+  Graph graph = new(...);      // nobody else can reach this yet
+  // ... fill it from the file ...
+  return graph;                // ownership passes to the caller
+}
+finally { await UniTask.SwitchToMainThread(); }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item No field is shared, so there is nothing to protect: the worker owns
+      the graph until it hands it over. Most background work in SEE has this
+      shape, which is why locks are rare in it.
+    \item Immutable data needs no protection either, for the same reason.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{Ask who else can reach the object before you ask which lock to take.
+  The answer is often nobody, and then \slideref{slide:race} cannot happen.}
+\end{frame}
+
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
     \item \texttt{UniTask} everywhere, \texttt{Task} nowhere (not yet). Production code
