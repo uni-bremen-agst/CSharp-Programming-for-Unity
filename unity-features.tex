@@ -284,9 +284,9 @@ private static readonly WaitForSeconds on = new(0.5f);
     \item \texttt{BlinkEffect} allocates twice per blink. Fix it, and say why
       the fix is safe. Would the same fix be safe for
       \texttt{WaitForSecondsRealtime}?
-    \item Which of these belong in an \texttt{Update}, and which do not?
-      A LINQ query over all nodes of the city;
-      \texttt{Debug.Log(\$"\ldots\{count\}\ldots")};
+    \item Which of these belong in an \texttt{Update}, and which do not?\\
+      A LINQ query over all nodes of the city;\\
+      \texttt{Debug.Log(\$"\ldots\{count\}\ldots")};\\
       \texttt{GetComponentsInChildren<Renderer>()};
       reading \texttt{transform.position}.
     \item A colleague makes a rarely used class a \texttt{struct} "for
@@ -305,9 +305,11 @@ private static readonly WaitForSeconds on = new(0.5f);
       \emph{not} safe for \texttt{WaitForSecondsRealtime}, which keeps the end
       of its interval inside itself and has to be reset before reuse.
     \item Only \texttt{transform.position} is fine --- a property read, no
-      allocation. The LINQ query allocates and is linear in the city;
+      allocation.\\
+      The LINQ query allocates and is linear in the city;\\
       \texttt{Debug.Log} builds a string, boxes the interpolated value and is
-      slow besides; \texttt{GetComponentsInChildren} returns a fresh array on
+      slow besides;\\
+      \texttt{GetComponentsInChildren} returns a fresh array on
       every call, so cache it.
     \item Nothing measurable was bought: the method is cold, and the collector
       never noticed it. What was risked is every copy trap that comes with a
