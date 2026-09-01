@@ -350,6 +350,70 @@ transform.position =
   precisely the pattern above.}
 \end{solutionframe}
 
+\begin{frame}[fragile]{Boxing: When a Value Becomes an Object}
+  \framelabel{slide:boxing}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+int i = 42;
+object boxed = i;        // boxing: 42 is copied onto the heap
+int back = (int)boxed;   // unboxing: copied back, checked at run time
+
+// Assets/SEE/Utils/Config/ConfigIO.cs -- config values travel as object
+public static bool Restore<T>(Dictionary<string, object> attributes,
+                              string label, ref T value)
+{
+    if (attributes.TryGetValue(label, out object v))
+    {
+        value = (T)v;    // unboxes whenever T is a value type
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item Boxing wraps a value type in a heap object so that it can go where
+      an \texttt{object} is expected. It allocates, and it copies: the box
+      never affects the original (\slideref{slide:valuetypes}).
+    \item Unboxing must name the exact type. \texttt{(long)} on a boxed
+      \texttt{int} throws, although \texttt{long x = someInt;} is an ordinary
+      widening conversion.
+    \item SEE makes both choices on purpose. \texttt{ConfigIO} stores every
+      value as \texttt{object} --- configuration is read once at startup.
+      \texttt{Attributable} keeps a typed dictionary per attribute type, since
+      node attributes are read constantly.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Where Does It Box?}
+  \begin{enumerate}
+    \item Which of these allocate a box, and why?\\
+      \texttt{object o = 3;} \quad\\
+      \texttt{xs.Add(3)} on a \texttt{List<int>} \quad\\
+      \texttt{IComparable c = 3;} \quad\\
+      \texttt{Debug.Log(\$"\{count\} nodes\textbackslash n");} with an
+      \texttt{int count}
+    \item \texttt{ConfigIO} uses one \texttt{Dictionary<string, object>};
+      \texttt{Attributable} uses three typed dictionaries. Give the argument
+      for each, and say what would have to change for the other to win.
+    \item A \texttt{Vector3} is put into a \texttt{List<object>}. You read it
+      back, set its \texttt{x}, and the list is unchanged. Why?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Where Does It Box?}
+  \begin{enumerate}
+    \item \texttt{object o = 3} boxes, and so does \texttt{IComparable c = 3},
+      because an interface is a reference type. The interpolation boxes too:
+      in C\# 9 it becomes \texttt{string.Format} with an \texttt{object[]}.
+      \texttt{List<int>.Add} does \emph{not} --- generics are reified, so the
+      list really stores \texttt{int}s.
+    \item Heterogeneous values read once favour the single \texttt{object}
+      dictionary; homogeneous values read per frame favour typed ones. Change
+      how often the config is read, or make node attributes arbitrary types,
+      and the answers swap.
+    \item The list holds a boxed \emph{copy}, and reading it back unboxes into
+      another copy. You modified the second copy. It is the same copy trap as
+      with structs, with a heap allocation added.
+  \end{enumerate}
+\end{solutionframe}
+
 \begin{frame}{Nullability}
   \begin{itemize}
     \item Java: any reference may be \texttt{null}; primitives cannot be
