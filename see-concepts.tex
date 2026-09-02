@@ -1,0 +1,395 @@
+%%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
+
+\lecture{SEE Concepts}{see-concepts}
+\section{SEE Concepts}
+
+\showtitlepage{Cities, Providers, Players, Actions, History}
+
+%%% Every example is taken from SEE, so the sources named in the listings can
+%%% be opened next to the slide.
+
+\subsection{Code Cities}
+
+\begin{frame}[fragile]{A Code City}
+    \framelabel{slide:city}
+    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/AbstractSEECity.cs
+public abstract partial class AbstractSEECity : SerializedMonoBehaviour
+{
+    public abstract Graph LoadedGraph { get; protected set; }
+    public abstract IGraphRenderer Renderer { get; }
+    public NodeTypeVisualsMap NodeTypes = new();
+    ...
+ }
+    \end{lstlisting}
+    \vspace{1ex}
+
+    \begin{itemize}
+        \item A \textit{code city} is a \texttt{GameObject} holding an
+        instance of a subclass of \texttt{AbstractSEECity}.
+        \item An \texttt{AbstractSEECity} has the settings to generate
+        all \texttt{GameObject}s for a code city (loading and rendering a \texttt{Graph}).
+        \item A \textit{game node} is a \texttt{GameObject} representing
+        a graph \texttt{Node} in a code city.
+        \item A \textit{game edge} is a \texttt{GameObject} representing
+        a graph \texttt{Edge} in a code city.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{GameObject} Hierarchy of a Code City}
+  \begin{columns}[c]
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item There is at most one root game node that is an immediate child
+        of a code city.
+        \item The game-node hierarchy and graph-node hierarchy
+        are isomorphic.
+        \item All game edges are immediate children of the code city.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      %%% \incgraphics adds a \colorbox, whose \fboxsep would otherwise
+      %%% push the image past the column edge.
+      \incgraphics{width=\dimexpr\textwidth-2\fboxsep\relax}%
+                  {figures/CloneCityHierarchy.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Scene Constraints}
+    \begin{itemize}
+        \item  A scene may hold several cities side by side,
+        each with its own data and settings.
+        \item The \texttt{name} of a game node/edge equals the \texttt{ID}
+        of a graph \texttt{Node}/\texttt{Edge}.
+        \item The \texttt{name} of a game node/edge is unique within
+        a scene at a particular point in time.
+    \end{itemize}
+    \vspace{1ex}
+
+    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// game object -> graph element: read the NodeRef/EdgeRef component
+gameObject.TryGetNode(out Node node);    // false if there is none
+gameObject.TryGetEdge(out Edge edge);
+Node n = gameObject.GetNode();           // throws if there is none
+
+// graph element -> game object: by ID, which is the game object's name
+GameObject gameNode = GraphElementIDMap.Find(node.ID);
+GameObject gameEdge = GraphElementIDMap.Find(edge.ID);
+    \end{lstlisting}
+    \vspace{1ex}
+
+    \hint{The way back leads through the \texttt{ID} only, and that is no
+    accident: a net action (\slideref{slide:netaction}) cannot send a
+    reference, but it can send an \texttt{ID}.}
+\end{frame}
+
+
+\begin{frame}[fragile]{The Family of Cities}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+AbstractSEECity                  the component, the settings, the node types
+ |
+ +-- SEECity                     one graph
+ |    +-- SEECityRandom          a generated graph, for experiments
+ |    +-- SEEReflexionCity       implementation and architecture in one
+ |    +-- VCSCity                anchored in a version control repository
+ |         +-- BranchCity        the branches of a repository
+ |         +-- CommitCity        the state at one commit
+ |
+ +-- SEECityEvolution            a series of graphs, played as an animation
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The split at the top is the one that matters: \texttt{SEECity} shows a
+  single graph, \texttt{SEECityEvolution} a whole series of them. Everything
+  below \texttt{SEECity} differs only in where the graph comes from and what
+  extra structure it carries.
+\end{frame}
+
+\begin{frame}[fragile]{Settings Are Annotated, Not Coded}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/SEECity.cs
+[OdinSerialize, ShowInInspector,
+ Tooltip("A graph provider yielding the data ..."),
+ TabGroup(DataFoldoutGroup), RuntimeTab(DataFoldoutGroup), ...]
+public SingleGraphPipelineProvider DataProvider = new();
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{TabGroup} places the field in the editor inspector,
+      \texttt{RuntimeTab} in the configuration menu that SEE builds at run
+      time by reflecting over these very fields.
+    \item The same fields are written to and read from the city's
+      configuration file by \texttt{ConfigWriter} and \texttt{ConfigReader}.
+    \item One annotated field therefore yields three things at once: an
+      inspector row, a menu entry, and a line in the configuration file. Adding
+      a setting means adding a field, not writing user interface code.
+  \end{itemize}
+\end{frame}
+
+\subsection{Graph Providers}
+
+\begin{frame}[fragile]{Where the Graph Comes From}
+  \framelabel{slide:provider}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/SEECity.cs
+public SingleGraphPipelineProvider DataProvider = new();
+
+public virtual async UniTask LoadDataAsync()
+{
+  ...
+  LoadedGraph = await DataProvider.ProvideAsync(new Graph(""), this,
+                                                ReportProgress, token);
+  ...
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The city itself reads no file and calls no tool. It hands an empty graph to
+  its provider and takes back a finished one. Which files, which repository,
+  which analysis --- none of that is the city's business.
+\end{frame}
+
+\begin{frame}[fragile]{A Graph Provider Transforms a Graph}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public abstract UniTask<T> ProvideAsync(T graph, AbstractSEECity city,
+                                        Action<float> changePercentage,
+                                        CancellationToken token);
+
+// GXLSingleGraphProvider: ignores the input, produces a graph
+return await GraphReader.LoadAsync(Path, city.HierarchicalEdges, ...);
+
+// CSVGraphProvider: takes the graph, adds metrics, returns it
+await MetricImporter.LoadCsvAsync(graph, Path, token: token);
+return graph;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Graph in, graph out --- that one signature is what makes providers
+  composable. A provider is not a loader but a step, and only the first step
+  of a pipeline usually ignores what it was given.
+\end{frame}
+
+\begin{frame}{Sources, Augmenters, Combiners}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{ll}
+      \hline
+      \textbf{Role} & \textbf{For example}\\
+      \hline
+      Produce a graph      & \texttt{GXLSingleGraphProvider},
+                             \texttt{GitBranchesGraphProvider}\\
+      Add to a graph       & \texttt{CSVGraphProvider},
+                             \texttt{JaCoCoGraphProvider},\\
+                           & \texttt{ReportGraphProvider},
+                             \texttt{DashboardGraphProvider}\\
+      Combine graphs       & \texttt{ReflexionGraphProvider},
+                             \texttt{MergeDiffGraphProvider}\\
+      Hold other providers & \texttt{SingleGraphPipelineProvider}\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{2ex}
+
+  A typical pipeline reads a GXL file, then adds coverage from JaCoCo, then
+  adds issues from a report. Each step is configured separately and none of
+  them knows about the others.
+  \vspace{1ex}
+
+  \hint{The augmenters expect a graph and complain if they get none. Order in
+  the pipeline is therefore not a matter of taste.}
+\end{frame}
+
+\begin{frame}[fragile]{One Graph or a Series}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+public abstract class GraphProvider<T, K> where K : Enum
+
+public abstract class SingleGraphProvider
+  : GraphProvider<Graph, SingleGraphProviderKind>
+
+public abstract class MultiGraphProvider
+  : GraphProvider<List<Graph>, MultiGraphProviderKind>
+
+// SEECity            LoadedGraph       = await ...(new Graph(""), ...)
+// SEECityEvolution   LoadedGraphSeries = await ...(new List<Graph>(), ...)
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Evolution needs a sequence rather than a graph, and that is the only
+  difference: the same framework, the same pipeline idea, a different
+  \texttt{T}. The kind enum accompanying it lets a saved configuration name
+  the provider to recreate.
+\end{frame}
+
+\subsection{Multiple Players}
+
+\begin{frame}[fragile]{Every Change Happens Twice}
+  \framelabel{slide:netaction}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Controls/Actions/DeleteAction.cs
+// Actual deletion (on all clients and locally).
+new DeleteNetAction(go.name, removeNodeTypes).Execute();
+GameElementDeleter.Delete(go, removeNodeTypes);
+
+// Assets/SEE/Net/Actions/GraphElement/DeleteNetAction.cs
+public override void ExecuteOnClient()
+{
+  GameObject objToDelete = Find(GraphElementID);
+  GameElementDeleter.Delete(objToDelete, RemoveNodeTypes);
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The change itself lives in neither class. Both the action and its network
+  twin call the same helper in \texttt{SEE.Game.SceneManipulation}, so what
+  the other players see cannot drift from what you see. The local half is a
+  full-blown action with a life cycle (\slideref{slide:action}); the remote
+  half is one method.
+\end{frame}
+
+\begin{frame}[fragile]{The Life of a NetAction}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/Actions/AbstractNetAction.cs
+public void Execute(ulong[] recipients = null)
+{
+  Network.BroadcastAction(ActionSerializer.Serialize(this), recipients);
+}
+
+public virtual void ExecuteOnServer() { }   // default: nothing
+public abstract void ExecuteOnClient();     // every client but the sender
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The action travels to the server as a string, and the server passes
+      it on with \texttt{RpcTarget.Not(senderId)}: the sender has already made
+      the change locally and must not make it twice.
+    \item \texttt{Requester} carries the client identifier, so a receiver can
+      tell whose action it is executing.
+    \item Actions too large for one packet are cut into fragments and put back
+      together on the far side.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{What May Travel}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/Actions/GraphElement/DeleteNetAction.cs
+// Note: All attributes are made public so that they will be serialized
+// for the network transfer.
+public bool RemoveNodeTypes;
+
+// and never a reference; the object is found again on each client:
+GameObject objToDelete = Find(GraphElementID);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item A net action is serialized with \texttt{JsonUtility}: every field
+      that must travel is public and not \texttt{readonly}.
+    \item A \texttt{GameObject} or a \texttt{Component} cannot travel, because
+      the receiving client has different objects at different addresses. Send
+      the identifier and look it up again.
+    \item In the editor, \texttt{Execute} checks serializability before
+      sending, so this mistake is caught while you are testing, not in a
+      session with others.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Late Joiners and Ephemera}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/Actions/AbstractNetAction.cs
+public virtual bool ShouldBeSentToNewClient { get => true; }
+
+// Assets/SEE/Net/Actions/SetHoverNetAction.cs and its kin
+public override bool ShouldBeSentToNewClient { get => false; }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The server keeps every action that describes the world, and replays
+      them to a client that joins later. That is how a newcomer arrives in a
+      city somebody else built.
+    \item Hovering, grabbing, highlighting, pointing, sounds: these describe a
+      moment, not the world. They opt out, or a late joiner would inherit a
+      history of somebody else's mouse.
+    \item Deciding this correctly is part of writing a net action. Ask whether
+      a player who arrives in an hour still needs to know.
+  \end{itemize}
+\end{frame}
+
+\subsection{The Action History}
+
+\begin{frame}[fragile]{An Action Has a Life Cycle}
+  \framelabel{slide:action}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/History/IReversibleAction.cs
+void Awake();            // once, when the action is first started
+void Start();            // whenever it is (re-)enabled
+bool Update();           // every frame; true means completed
+void Stop();             // another action takes over
+void Undo();  void Redo();
+IReversibleAction NewInstance();
+
+enum Progress { NoEffect, InProgress, Completed }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  An action is a mode, not a method call: it is started, then asked every
+  frame whether it is done. When \texttt{Update} finally returns true, the
+  history records the action and immediately puts a fresh instance of the same
+  kind in its place, so the tool stays selected.
+\end{frame}
+
+\begin{frame}[fragile]{Two Histories}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/History/ActionHistory.cs
+private Stack<IReversibleAction> UndoHistory { get; } = new();
+private Stack<IReversibleAction> RedoHistory { get; } = new();
+
+private readonly List<GlobalHistoryEntry> globalHistory = new();
+
+public readonly struct GlobalHistoryEntry
+{
+  public bool IsOwner { get; }              // did I execute it?
+  public HistoryType ActionType { get; }    // Action or UndoneAction
+  public string ActionID { get; }
+  public HashSet<string> ChangedObjects { get; }
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The two stacks are yours alone and hold the real objects. The global history
+  is shared: every player has the same list, kept in step by
+  \texttt{NetActionHistory} with \texttt{Push}, \texttt{Delete}, and
+  \texttt{Replace}.
+\end{frame}
+
+\begin{frame}{Undoing in Company}
+  \begin{itemize}
+    \item Undo is not the last thing that happened but the last thing
+      \emph{I} did. \texttt{IsOwner} in the global history is what makes that
+      distinction possible, and \slideref{slide:netaction} is why the question
+      arises at all.
+    \item Before undoing, SEE looks at every entry recorded after yours. If
+      somebody else has touched one of your \texttt{ChangedObjects} since,
+      undoing would silently discard their work, and \texttt{UndoImpossible}
+      is raised instead.
+    \item An action that has had no effect yet is not undone but simply
+      dropped: undoing it would give the user no visible answer to a key
+      press.
+  \end{itemize}
+  \vspace{2ex}
+
+  \hint{This is why \texttt{GetChangedObjects} is not optional paperwork. An
+  action that under-reports what it changed makes conflicting undos possible;
+  one that over-reports makes legitimate undos fail.}
+\end{frame}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
