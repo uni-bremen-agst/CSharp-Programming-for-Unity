@@ -2,8 +2,18 @@
 % !TeX root = main-slides.tex
 
 %%% There is exactly one section per lecture, hence this lists all lectures.
+%%% Two independent tables of contents rather than one in a multicol: each
+%%% starts at the top of its own column, whereas multicol staggers them.
+%%% The second range is open-ended, so a further lecture cannot fall off.
 \begin{frame}{Lectures}
-  \tableofcontents[hideallsubsections]
+  \begin{columns}[t]
+    \begin{column}{0.5\textwidth}
+      \tableofcontents[hideallsubsections, sections={1-4}]
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \tableofcontents[hideallsubsections, sections={5-}]
+    \end{column}
+  \end{columns}
 \end{frame}
 
 %\input{overview}
@@ -14,6 +24,7 @@
 \input{csharp-nunit}
 \input{unity-basics}
 \input{unity-features}
+\input{see-concepts}
 
 \endinput
 
@@ -45,6 +56,7 @@ Unity's new Input System (com.unity.inputsystem) — actions, bindings, multiple
 UI Toolkit / uGUI basics for in-game panels and charts
 %Physics basics: colliders, raycasting (used for object selection/interaction)
 %Materials, shaders basics, and the Universal Render Pipeline (URP) asset pipeline
+
 
 Part D — Advanced Unity
 Networking with Netcode for GameObjects: NetworkBehaviour, NetworkVariable, RPCs, ownership/authority — core to this project's multiplayer action-synchronization model (Assets/SEE/Net/Actions)
