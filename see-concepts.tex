@@ -217,13 +217,82 @@ public abstract class MultiGraphProvider
   \end{lstlisting}
   \vspace{1ex}
 
-  Evolution needs a sequence rather than a graph, and that is the only
+  Evolution needs a sequence rather than a single graph, and that is the only
   difference: the same framework, the same pipeline idea, a different
   \texttt{T}. The kind enum accompanying it lets a saved configuration name
   the provider to recreate.
 \end{frame}
 
 \subsection{Multiple Players}
+
+\begin{frame}{One Server, Many Clients}
+  \framelabel{slide:multiplayer}
+  \begin{center}
+    \begin{tikzpicture}[
+      font=\scriptsize,
+      box/.style    = {draw=black!45, rounded corners=2pt, align=center,
+                       inner sep=3pt, minimum height=7mm},
+      host/.style   = {box, fill=black!10, minimum width=20mm},
+      client/.style = {box, fill=white, minimum width=17mm},
+      me/.style     = {client, draw=black, very thick},
+      joiner/.style = {client, densely dashed, text=black!60},
+      store/.style  = {draw=black!35, fill=hintbg, rounded corners=2pt,
+                       align=center, inner sep=2pt, font=\tiny},
+      send/.style   = {-{Stealth[length=4pt]}, semithick},
+      recv/.style   = {-{Stealth[length=4pt]}, semithick, black!55},
+      replay/.style = {-{Stealth[length=4pt]}, semithick, densely dashed,
+                       black!55},
+      machine/.style = {draw=black!40, densely dotted, rounded corners=3pt},
+      %%% text=black is needed because a label on a gray arrow would
+      %%% otherwise inherit that arrow's color.
+      lbl/.style    = {font=\tiny, inner sep=1.5pt, fill=white,
+                       align=center, text=black}
+    ]
+      %%% The store sits directly above the host, so that it reads as part of
+      %%% it rather than as a fourth participant.
+      \node[store]  (st) at (0, 2.85)  {recorded actions};
+      \node[host]   (h)  at (0, 2.15)  {SEE server};
+      \draw[black!35] (st) -- (h);
+
+      \node[me]     (c1) at (-3.5, 0)  {client\\\emph{you}};
+      \node[client] (c2) at (0, 0)     {client};
+      \node[client] (c3) at (3.5, 0)   {client};
+
+      %%% One machine running both roles: that is what host means. The box is
+      %%% drawn before the arrows so that they stay on top of it, and its top
+      %%% edge stops at the store, so it does not enlarge the picture.
+      \draw[machine] (-1.3, -0.7) rectangle (1.3, 3.05);
+      \node[lbl] at (0, -0.7) {host};
+
+      %%% One label per direction: the two downward arrows mean the same
+      %%% thing, so labeling both only adds clutter.
+      \draw[send] (c1) -- node[lbl, above, pos=0.55] {NetAction} (h);
+      \draw[recv] (h)  -- (c2);
+      \draw[recv] (h)  -- node[lbl, above, pos=0.55] {ExecuteOnClient} (c3);
+
+      %%% The local half of the change, kept below the client so that it does
+      %%% not compete with the network arrows above.
+      \node[lbl] (a) at (-3.5, -0.8) {Action};
+      \draw[send] (a) -- (c1);
+
+      %%% The newcomer is dashed and stands apart from the bottom row: it is
+      %%% not in the session yet, and what it gets is the record of what has
+      %%% happened, not a change somebody has just made.
+      \node[joiner] (c4) at (5.1, 2.15) {client\\\emph{joining later}};
+      \draw[replay] (h) -- node[lbl, above] {replay} (c4);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{itemize}
+    \item Every change goes through the server, which decides the order in
+      which the others get to see it.
+    \item The one who caused it is left out: that client has already changed
+      its own scene, so the server sends the change to everybody else.
+    \item The server remembers. Somebody joining in an hour must still arrive
+      in the city the others have built by then.
+    \item A host is a server and client on the same machine.
+  \end{itemize}
+\end{frame}
 
 \begin{frame}[fragile]{Every Change Happens Twice}
   \framelabel{slide:netaction}
