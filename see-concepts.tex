@@ -456,6 +456,86 @@ public readonly struct GlobalHistoryEntry
   one that over-reports makes legitimate undos fail.}
 \end{frame}
 
+\subsection{Operators}
+
+\begin{frame}[fragile]{One Owner per Game Element}
+  \framelabel{slide:operator}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Extensions/GameNodeExtensions.cs -- adds it if absent
+NodeOperator nodeOperator = gameNode.NodeOperator();
+EdgeOperator edgeOperator = gameEdge.EdgeOperator();
+
+// Assets/SEE/Game/Operator/NodeOperator.cs
+nodeOperator.MoveTo(newPosition, factor: 1);
+nodeOperator.ResizeTo(newLocalScale, newPosition);
+nodeOperator.ChangeColorsTo(color);
+
+// Assets/SEE/Game/Operator/EdgeOperator.cs
+edgeOperator.MorphTo(newSpline);          // one spline into another
+edgeOperator.ShowOrHide(show, animationKind);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A layout animation, a drag, a hover, a reflexion change and an incoming net
+  action may all want to change the same node in the same frame. Writing to
+  \texttt{transform} directly, whichever runs last wins, and which that is
+  depends on script execution order. The operator is the one component allowed
+  to change the element, so the requests have somewhere to meet.
+\end{frame}
+
+\begin{frame}[fragile]{Conflicting Change Requests}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Operator/AbstractOperator.cs -- the same property twice
+if (EqualityComparer.Equals(target, TargetValue) && duration > 0)
+{
+  return new DummyOperationCallback<C>();  // already heading there
+}
+
+// ... and properties that cannot both animate
+KillAnimator(complete);
+foreach (IOperation operation in
+         ConflictingOperations.Where(x => x.IsRunning))
+{
+  operation.KillAnimator(true);            // complete it, then override
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item Asking again for the value an element is already moving towards does
+      nothing, so repeated requests neither restart nor flicker. A different
+      value redirects the motion from wherever the element is now.
+    \item The \texttt{true} is the interesting part: a conflicting animation is
+      not abandoned but jumped to its own target first, so the losing request
+      still takes effect and merely stops animating.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{The Value It Is Supposed to Have}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Operator/NodeOperator.cs, in UpdateEdgeLayout
+ourTransform.position = new Vector3(positionX.TargetValue,
+                                    positionY.TargetValue,
+                                    positionZ.TargetValue);
+ourTransform.localScale = scale.TargetValue;
+// ... and only now recalculate the layout of every attached edge
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{TargetValue} is where the element is \emph{going}, which
+      during an animation is not where it is. The edges are laid out against
+      the node's destination while the node is still gliding there.
+    \item Hence writing to \texttt{transform} behind the operator's back is
+      worse than merely skipping an animation: it leaves \texttt{TargetValue}
+      lying, and the \emph{next} edge layout is computed for a destination
+      that was never reached.
+    \item The remote half of a resize asks the very same operator
+      (\slideref{slide:netaction}), so what the others see is animated by the
+      same code that animates it here.
+  \end{itemize}
+\end{frame}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "main-slides"
