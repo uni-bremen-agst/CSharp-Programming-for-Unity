@@ -146,7 +146,7 @@ transform.SetParent(parent, false); // keeps the local values, moves it
 
 \begin{frame}[fragile]{Getting at the Components}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/GameObjects/GameObjectExtensions.cs
+// Assets/SEE/Extensions/GameNodeExtensions.cs and GameEdgeExtensions.cs
 Node node = gameNode.GetNode();  // executes GetComponent<NodeRef>().Value
 Edge edge = gameEdge.GetEdge();  // both throw if the ref is missing
 
@@ -176,8 +176,8 @@ BlinkEffect effect = obj.AddComponent<BlinkEffect>();      // at run time
 
 \begin{frame}[fragile]{SEE Has Its Own, and They Are the Ones to Use}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/GameObjects/GameObjectExtensions.cs -- all three are extensions
-// of GameObject, so they read like methods of it
+// Assets/SEE/Extensions/Components.cs -- all three are extensions of
+// GameObject, so they read like methods of it
 
 Renderer r = obj.MustGetComponent<Renderer>();  // throws, naming obj and T
 BlinkEffect b = obj.AddOrGetComponent<BlinkEffect>();  // adds it if absent
