@@ -40,7 +40,7 @@ public static bool InternalLoggingEnabled = true;
 
 \begin{frame}[fragile]{Fail Where the Cause Is}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/GameObjects/GameObjectExtensions.cs
+// Assets/SEE/Extensions/Components.cs
 public static T MustGetComponent<T>(this GameObject gameObject)
 {
     if (!gameObject.TryGetComponent(out T component))
@@ -114,9 +114,9 @@ public static T MustGetComponent<T>(this GameObject gameObject)
 // Assets/SEE/Utils/Performance.cs
 Performance p = Performance.Begin("loading graph data");
 ...
-p.End();     // emits the action and the milliseconds it took
+p.End(true); // prints the action and the milliseconds it took
 
-// Assets/SEE/DataModel/DG/IO/GraphsReader.cs
+// Assets/SEE/DataModel/DG/IO/GXL/GraphsReader.cs
 Performance.Begin($"Loading GXL files from {directory}");
 
 // Assets/SEE/Game/CityRendering/GraphRenderer.cs
@@ -136,6 +136,88 @@ Performance.Begin($"Node layout {Settings.NodeLayoutSettings.Kind} ...");
   \hint{\textit{Performance} is a class written by SEE developers.}
 \end{frame}
 
+\begin{frame}[fragile]{An Async Method Has No Row}
+  \framelabel{slide:asyncprofiling}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXL/GraphsReader.cs, in LoadAsync
+foreach (string gxlPath in sortedGraphNames)
+{
+    await graphCreator.LoadAsync(...);
+    await MetricImporter.LoadCsvAsync(graph, csvFilename);
+}
+
+// ... and what the Profiler shows of it: one entry per piece
+PlayerLoop
+  UniTaskLoopRunnerUpdate    // where UniTask pumps its continuations
+    GraphsReader.<LoadAsync>d__N.MoveNext()   // the state machine
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item The compiler cuts an \texttt{async} body at every \texttt{await} and
+      makes a state machine of the pieces. Each piece is one call to
+      \texttt{MoveNext} and they resume in different frames, so no row in the
+      Hierarchy view adds up to what \texttt{LoadAsync} cost --- and the row's
+      parent is whatever pumped the continuation, not the caller.
+    \item Deep Profile is usually needed to see the pieces at all:
+      compiler-generated methods are not among the ones Unity instruments.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Elapsed Time Is Not CPU Time}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/Performance.cs -- a stopwatch survives every await
+Performance p = Performance.Begin("loading graph data");
+int frameBefore = Time.frameCount;
+await reader.LoadAsync(directory, ...);
+p.End(true);
+Debug.Log($"spanned {Time.frameCount - frameBefore} frames\n");
+
+marker.Begin();               // a profiler sample survives nothing
+await SomethingSlow();        // wrong: End lands in a later frame
+marker.End();
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item The two are one number for a synchronous method and two unrelated
+      ones for an async method: nine seconds of loading can be a fraction of a
+      second of CPU, spread over hundreds of frames.
+    \item Milliseconds and frames spanned together already route the question.
+      One late frame is a case for the Profiler; hundreds of ordinary ones
+      never are.
+    \item A sample must begin and end on the same thread in the same frame, so
+      instrument the pieces between the awaits, never the await itself.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{The Work You Cannot See}
+  \framelabel{slide:offthread}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs
+await UniTask.SwitchToThreadPool();
+while (await Reader.ReadAsync())   // the whole parse, off the main thread
+{
+    ...
+}
+
+// what it takes to get a row in the timeline for that thread
+Profiler.BeginThreadProfiling("SEE", "GXL parsing");
+try { ... }
+finally { Profiler.EndThreadProfiling(); }
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item The Profiler samples the main thread, the render thread and Unity's
+      job workers. A thread from the .NET thread pool is none of those, and
+      that is where SEE does its heaviest loading: the GXL parser, the CSV
+      metric importer, the report parsers, the Git providers.
+    \item So \emph{I profiled the load and every frame looked idle} is the
+      expected outcome rather than a mystery.
+  \end{itemize}
+\end{frame}
+
 \begin{exerciseframe}{Which Tool?}
   \begin{enumerate}
     \item Loading a city takes nine seconds. Which measurement would you
@@ -145,6 +227,9 @@ Performance.Begin($"Node layout {Settings.NodeLayoutSettings.Kind} ...");
     \item A test exercises a method that logs an error on purpose. The method
       behaves correctly, yet the test is red. What happened, and what is the
       fix?
+    \item You profile the loading of a code city with Deep Profile on and find
+      no expensive method anywhere, although loading plainly takes seconds.
+      Where did the time go?
   \end{enumerate}
 \end{exerciseframe}
 
@@ -161,6 +246,10 @@ Performance.Begin($"Node layout {Settings.NodeLayoutSettings.Kind} ...");
       failure. Declare it with \texttt{LogAssert.Expect} before the call
       (\slideref{slide:console}), which both fixes the test and documents that
       the error belongs there.
+    \item Onto a thread the Profiler does not sample. The parsers begin with
+      \texttt{await UniTask.SwitchToThreadPool()}, and a thread from the .NET
+      thread pool gets no row until the code asks for one with
+      \texttt{Profiler.BeginThreadProfiling} (\slideref{slide:offthread}).
   \end{enumerate}
 \end{solutionframe}
 
