@@ -157,7 +157,7 @@
 
 \begin{frame}[fragile]{An Edit-Mode Test}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestFilenames.cs
+// Assets/SEETests/Utils/TestFilenames.cs
 using NUnit.Framework;
 
 namespace SEE.Utils
@@ -462,7 +462,7 @@ OnceBase
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestFilenames.cs: one case per line
+// Assets/SEETests/Utils/TestFilenames.cs: one case per line
 [TestCase("Assets/SEE/MyFile.cs", "MyFile.cs")]
 [TestCase("MyDir/", "")]
 [TestCase(null, "")]
@@ -481,12 +481,12 @@ public void TestBasename(string path, string expected)
 
 \begin{frame}[fragile]{Parameterized Tests: Values and Sources}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestGraphIO.cs: the values live at the parameter
+// Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs: values at the parameter
 [Test, Sequential]
 public async Task TestGraphWriter([Values(true, false)] bool compress)
 { ... }
 
-// Assets/SEETests/TestActionStateType.cs: cases computed at run time
+// Assets/SEETests/Controls/ReversibleActions/TestActionStateType.cs
 [Test, TestCaseSource(nameof(AllTypeSupplier))]
 public void TestEquality(AbstractActionStateType type) { ... }
   \end{lstlisting}
@@ -697,7 +697,7 @@ public IEnumerator TestRotation()        // 2: must be public
   \vspace{0.5ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestDataPath.cs
+// Assets/SEETests/Utils/Paths/TestDataPath.cs
 LogAssert.Expect(LogType.Error,
                  new Regex(".*There is no UserSettings component.*"));
 
@@ -771,7 +771,7 @@ public void TestMissingFile()
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestDataPath.cs, an Editor-only assembly
+// Assets/SEETests/Utils/Paths/TestDataPath.cs, an Editor-only assembly
 [UnityTest]
 public IEnumerator LoadFromForeignServer() =>
   UniTask.ToCoroutine(async () =>
@@ -1046,12 +1046,14 @@ public IEnumerator TestMenuOption1()
 
 \begin{frame}[fragile]{Asynchronous Code in Tests}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        // Assets/SEETests/TestGraphIO.cs: NUnit awaits a Task directly
+        // Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs
+        // NUnit awaits a Task directly
         [Test, Sequential]
         public async Task TestGraphWriter([Values(true, false)] bool compress)
         { ... }
 
-        // Assets/SEETests/TestDataPath.cs: UniTask bridged into [UnityTest]
+        // Assets/SEETests/Utils/Paths/TestDataPath.cs
+        // UniTask bridged into [UnityTest]
         [UnityTest]
         public IEnumerator LoadFromFile() =>
         UniTask.ToCoroutine(async () =>

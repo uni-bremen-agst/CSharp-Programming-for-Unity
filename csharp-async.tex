@@ -548,8 +548,8 @@ public override async UniTask<Graph> ProvideAsync
   return await GraphReader.LoadAsync(Path, ..., token);
 }
 
-// Assets/SEE/DataModel/DG/IO/GXLParser.cs -- GraphReader extends GXLParser,
-// so the call above lands in the XML read loop of its base class, which does:
+// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs -- GraphReader extends it, so
+// the call above lands in the XML read loop of its base class, which does:
 token.ThrowIfCancellationRequested();            // at every XML node
 
 // Assets/SEE/Game/City/SEECity.cs -- on every reload, because a canceled
@@ -817,7 +817,7 @@ await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
 \begin{frame}[fragile]{Leaving and Returning to the Main Thread}
   \framelabel{slide:mainthread}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXLParser.cs
+// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs
 try
 {
   await UniTask.SwitchToThreadPool();      // parsing is pure CPU work
@@ -892,7 +892,7 @@ private async UniTask<int> CountAsync(GameObject root, string file)
 \begin{frame}[fragile]{Fire and Forget, on Purpose}
   \framelabel{slide:forget}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Controls/Actions/DeleteAction.cs
+// Assets/SEE/Controls/ReversibleActions/DeleteAction.cs
 ShowDeletionNotificationAsync(message).Forget();
 
 private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
@@ -1174,7 +1174,7 @@ while (unhandledDiagnostics.TryDequeue(out PublishDiagnosticsParams d))
 
 \begin{frame}[fragile]{The Cheapest Thread-Safety Is Not Sharing}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXLParser.cs, in essence
+// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs, in essence
 try
 {
   await UniTask.SwitchToThreadPool();

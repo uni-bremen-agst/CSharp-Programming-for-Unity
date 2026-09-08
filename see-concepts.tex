@@ -297,7 +297,7 @@ public abstract class MultiGraphProvider
 \begin{frame}[fragile]{Every Change Happens Twice}
   \framelabel{slide:netaction}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Controls/Actions/DeleteAction.cs
+// Assets/SEE/Controls/ReversibleActions/DeleteAction.cs
 // Actual deletion (on all clients and locally).
 new DeleteNetAction(go.name, removeNodeTypes).Execute();
 GameElementDeleter.Delete(go, removeNodeTypes);
@@ -312,7 +312,7 @@ public override void ExecuteOnClient()
   \vspace{1ex}
 
   The change itself lives in neither class. Both the action and its network
-  twin call the same helper in \texttt{SEE.Game.SceneManipulation}, so what
+  twin call the same helper in \texttt{SEE.SceneManipulation}, so what
   the other players see cannot drift from what you see. The local half is a
   full-blown action with a life cycle (\slideref{slide:action}); the remote
   half is one method.
@@ -393,7 +393,7 @@ public override bool ShouldBeSentToNewClient { get => false; }
 \begin{frame}[fragile]{An Action Has a Life Cycle}
   \framelabel{slide:action}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Utils/History/IReversibleAction.cs
+// Assets/SEE/Controls/ReversibleActions/IReversibleAction.cs
 void Awake();            // once, when the action is first started
 void Start();            // whenever it is (re-)enabled
 bool Update();           // every frame; true means completed
@@ -413,7 +413,7 @@ enum Progress { NoEffect, InProgress, Completed }
 
 \begin{frame}[fragile]{Two Histories}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Utils/History/ActionHistory.cs
+// Assets/SEE/ActionHistory/ActionHistory.cs
 private Stack<IReversibleAction> UndoHistory { get; } = new();
 private Stack<IReversibleAction> RedoHistory { get; } = new();
 
