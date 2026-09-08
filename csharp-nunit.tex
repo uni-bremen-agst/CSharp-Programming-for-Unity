@@ -563,12 +563,12 @@ public void TestBasename(string path, string expected)
   \vspace{0.5ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/TestJacocoImporter.cs
+// Assets/SEETests/GraphProviders/TestGraphProviders.cs, setup elided
 [Test]
-public async Task TestLoadAsyncMethodAsync()
+public async Task TestGXLGraphProviderAsync()
 {
-  Graph graph = await LoadGraphAsync(path);
-  Assert.That(graph.NodeCount, Is.EqualTo(3));
+  Graph loaded = await provider.ProvideAsync(new Graph(""), NewCity());
+  Assert.That(loaded.NodeCount, Is.EqualTo(1585));
 }
   \end{lstlisting}
   \vspace{0.5ex}
