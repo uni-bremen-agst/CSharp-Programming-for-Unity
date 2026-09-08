@@ -1,0 +1,172 @@
+%%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
+
+\lecture{Debugging in Unity}{unity-debugging}
+\section{Debugging in Unity}
+
+\showtitlepage{Console, Breakpoints, Profiler}
+
+%%% Every example is taken from SEE, so the sources named in the listings can
+%%% be opened next to the slide.
+
+\subsection{Console and Debugger}
+
+\begin{frame}[fragile]{The Console, and How to Get More from It}
+  \framelabel{slide:console}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+Debug.Log("a plain message\n");
+Debug.LogWarning("something is odd\n");
+Debug.LogError("something is wrong\n");   // red, and with a stack trace
+
+// Assets/SEE/Game/Operator/LabelOperator.cs -- the second argument
+Debug.LogError("Could not retrieve portal for node label.\n", gameObject);
+
+// Assets/SEE/Net/Util/Logger.cs -- a channel that can be switched off
+public static bool InternalLoggingEnabled = true;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item That second argument of \texttt{Log*} is the part almost everybody forgets: it makes
+      the entry clickable and selects that game object in the hierarchy. SEE
+      passes it in a single place.
+    \item A log line is not free. It builds a string and walks the stack, so
+      it does not belong in code that runs every frame.
+    \item An unexpected \texttt{LogError} fails a Unity test, even one that is
+      otherwise green. If the error is the expected outcome, announce it with
+      \texttt{LogAssert.Expect}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Fail Where the Cause Is}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/GameObjects/GameObjectExtensions.cs
+public static T MustGetComponent<T>(this GameObject gameObject)
+{
+    if (!gameObject.TryGetComponent(out T component))
+    {
+        throw new InvalidOperationException(
+            $"Couldn't find component '{typeof(T).GetNiceName()}' "
+            + $"on game object '{gameObject.FullName()}'");
+    }
+    return component;
+}
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A missing component that is quietly returned as null becomes a
+  \texttt{NullReferenceException} elsewhere, a few frames later, in a stack
+  that no longer mentions the cause. Naming the type and the object turns an
+  afternoon of bisecting into reading one line.
+  \vspace{1ex}
+
+  The same idea, one level up: \texttt{AbstractNetAction} serializes itself to
+  JSON inside \texttt{\#if UNITY\_EDITOR} before sending, so a net action
+  holding an unserializable field is caught while you test it rather than in
+  a session with others.
+\end{frame}
+
+\begin{frame}{Breakpoints, and What They Hide}
+  \begin{itemize}
+    \item Rider and Visual Studio attach to the running Editor, and SEE ships
+      the packages for both. \texttt{Debug.Break()} pauses play mode from
+      inside the code, which is the way to stop on a state you cannot express
+      as a condition.
+    \item A breakpoint stops the player loop as well. Anything timed --- a
+      network timeout, an animation, a download --- is distorted the moment
+      you stop, so what you observe afterwards is not what would have
+      happened.
+    \item Stepping through an asynchronous method walks the compiler's state
+      machine. The call stack shows \texttt{MoveNext}, not the chain of
+      callers you were thinking of, which is why the console is often faster
+      than the debugger for a task that resumes on the wrong thread.
+    \item A forgotten task leaves no trace in the console. \emph{Window
+      $\rightarrow$ UniTask Tracker} lists every \texttt{UniTask} still
+      pending, which is where an awaited-forever \texttt{WaitUntil} shows up.
+  \end{itemize}
+\end{frame}
+
+\subsection{Profiling}
+
+\begin{frame}{Measure, Then Change}
+  \framelabel{slide:profiler}
+  \begin{itemize}
+    \item \emph{Window $\rightarrow$ Analysis $\rightarrow$ Profiler}, record
+      while playing, then click the frame that is late. The two columns worth
+      knowing first are CPU time and \emph{GC Alloc} --- the latter answers
+      the allocation question raised in the lecture on Unity features.
+    \item \emph{Deep Profile} records every managed call instead of the
+      instrumented ones. It finds the method you did not suspect, and it
+      distorts every timing while doing so, so use it to locate and not to
+      measure.
+    \item Editor numbers are not player numbers. To measure the real thing,
+      build with \emph{Development Build} and \emph{Autoconnect Profiler} and
+      profile the build.
+    \item There is not a single profiler marker in SEE, and none is needed to
+      start: Unity's own samples already carry the frame. A
+      \texttt{ProfilerMarker} is what you add once you want your own row in
+      that timeline.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Two Time Scales}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Utils/Performance.cs
+Performance p = Performance.Begin("loading graph data");
+...
+p.End();     // emits the action and the milliseconds it took
+
+// Assets/SEE/DataModel/DG/IO/GraphsReader.cs
+Performance.Begin($"Loading GXL files from {directory}");
+
+// Assets/SEE/Game/CityRendering/GraphRenderer.cs
+Performance.Begin($"Node layout {Settings.NodeLayoutSettings.Kind} ...");
+  \end{lstlisting}
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item The Profiler answers which frame was late. It cannot answer how long
+      loading a city took, because that spans hundreds of frames and no single
+      one of them is to blame.
+    \item For those, SEE times whole operations and writes the result to the
+      console, where it survives the session. A Profiler capture does not.
+  \end{itemize}
+  \vspace{1ex}
+
+  \hint{\textit{Performance} is a class written by SEE developers.}
+\end{frame}
+
+\begin{exerciseframe}{Which Tool?}
+  \begin{enumerate}
+    \item Loading a city takes nine seconds. Which measurement would you
+      reach for, and why is the Profiler the wrong one?
+    \item The frame rate drops, but only while a node is being dragged.
+      Which tool now, and which column?
+    \item A test exercises a method that logs an error on purpose. The method
+      behaves correctly, yet the test is red. What happened, and what is the
+      fix?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Which Tool?}
+  \begin{enumerate}
+    \item A stopwatch around the operation, which is what
+      \texttt{Performance.Begin} and \texttt{End} are for. Nine seconds is
+      hundreds of frames, and the Profiler reports per frame, so it would show
+      hundreds of unremarkable ones instead of the one number you want.
+    \item The Profiler, recording while you drag, and the \emph{GC Alloc}
+      column first: a drop that appears only during an interaction is usually
+      something allocating per frame in the path that the interaction takes.
+    \item The Unity Test Framework treats any logged error during a test as a
+      failure. Declare it with \texttt{LogAssert.Expect} before the call
+      (\slideref{slide:console}), which both fixes the test and documents that
+      the error belongs there.
+  \end{enumerate}
+\end{solutionframe}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main-slides"
+%%% mode: reftex
+%%% mode: flyspell
+%%% End:
