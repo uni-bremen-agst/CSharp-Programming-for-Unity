@@ -359,7 +359,7 @@ public SingleGraphPipelineProvider DataProvider = new();
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Three Decisions Make a City}
+\begin{frame}[fragile]{A User Decides how a City is Rendered}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Game/City/NodeLayoutKind.cs
 EvoStreets, Balloon, RectanglePacking, Treemap, CirclePacking,
@@ -520,6 +520,28 @@ public abstract class MultiGraphProvider
 \end{frame}
 
 \subsection{Multiple Players}
+
+\begin{frame}{Why Several People in One Room}
+  SEE addresses distributed development teams, and that is what the third
+  dimension is for: the visualization and the people looking at it are in the
+  same virtual room. A team member is not a cursor but an avatar one can turn
+  to, point at something with and read the face of, so the communication is
+  verbal and non-verbal at once.
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \texttt{Game/Avatars} drives an avatar's face and hands from a webcam
+      or from a headset's lip and eye tracking, and synchronizes both, so
+      mimics and gestures reach the others
+      (\texttt{BlendshapeExpressionsNetAction},
+      \texttt{AvatarHandAnimationsSync}).
+    \item \texttt{Dissonance} carries the voice chat, with a text chat
+      alongside it for whatever is easier typed than said.
+    \item \texttt{Game/Drawable} adds whiteboards to draw on together, shared
+      through the very net actions this subsection is about
+      (\texttt{Net/Actions/Drawable}).
+  \end{itemize}
+\end{frame}
 
 \begin{frame}{One Server, Many Clients}
   \framelabel{slide:multiplayer}
