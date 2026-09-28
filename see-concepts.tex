@@ -197,6 +197,27 @@ public static async UniTask<int> LoadCsvAsync(Graph graph, DataPath path,
   visual dimension such as height or color.
 \end{frame}
 
+\begin{frame}[fragile]{Where the Code Is}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/GraphElement.cs -- nodes and edges alike
+public string Directory { ... }     // "Source.Path"
+public string Filename  { ... }     // "Source.File"
+public string Path()                // the two of them combined
+public int? SourceLine   { ... }    // "Source.Line"
+public int? SourceColumn { ... }    // "Source.Column"
+public Range SourceRange { ... }
+
+// Assets/SEE/DataModel/DG/Node.cs
+public string SourceName { ... }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  These, too, are nothing but attributes, set by whichever analysis read the
+  source code. They are what lets SEE open the right file at the right line:
+  \texttt{ShowCodeAction} asks the graph element where it came from, and the
+  code viewer follows.
+\end{frame}
+
 \begin{frame}[fragile]{The Graph Knows Nothing of Unity}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/DataModel/DG/GraphElementExtensions.cs
