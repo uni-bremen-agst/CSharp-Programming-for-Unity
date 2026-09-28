@@ -117,18 +117,13 @@ public HashSet<string> HierarchicalEdges = HierarchicalEdgeTypes();
 
 public static HashSet<string> HierarchicalEdgeTypes() => new()
 { "Enclosing", "Belongs_To", "Part_Of", "Defined_In" };
-
-// Assets/SEE/DataModel/DG/IO/GXL/GraphReader.cs
-public static async UniTask<Graph> LoadAsync(DataPath path,
-    HashSet<string> hierarchicalEdgeTypes, string basePath, ...)
   \end{lstlisting}
   \vspace{1ex}
 
-  GXL knows nodes and directed edges, and nothing else. The tree of
-  \slideref{slide:twostructures} is not in the file: the reader is told which
-  edge types mean containment and builds the parent-child relation from the
-  edges of those types. Read the same file with a different set and a different
-  tree comes out.
+  Containment is not a property of a node but of an edge type: the nodes that
+  nest are the ones connected by an edge whose type the user has declared
+  hierarchical. The four defaults are what the analyses SEE usually consumes
+  happen to emit, nothing more, and a set of one's own is a setting away.
 \end{frame}
 
 \begin{frame}{Which Types Matter Is Configured}
@@ -170,11 +165,26 @@ public static void Save(string filename, Graph graph,
   The graphs shipped with SEE are compressed, which the reader handles by the
   file name extension, so a city loads a \texttt{.gxl.xz} without anyone
   unpacking anything.
+\end{frame}
+
+\begin{frame}[fragile]{The Tree Is Not in the File}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXL/GraphReader.cs
+public static async UniTask<Graph> LoadAsync(DataPath path,
+    HashSet<string> hierarchicalEdgeTypes, string basePath, ...)
+  \end{lstlisting}
   \vspace{1ex}
 
-  Note the asymmetry: the reader accepts a set of hierarchical edge types,
-  the writer emits one. A graph whose containment came from several types does
-  not survive a round trip unchanged.
+  GXL knows nodes and directed edges, and nothing else. The tree of
+  \slideref{slide:twostructures} is nowhere in the file: the reader is handed
+  the hierarchical edge types and builds the parent-child relation from the
+  edges of those types. Read the same file with a different set and a different
+  tree comes out.
+  \vspace{1ex}
+
+  Hence the asymmetry between the two ends: \texttt{LoadAsync} accepts a set of
+  such types, \texttt{Save} emits one. A graph whose containment came from
+  several types does not survive a round trip unchanged.
 \end{frame}
 
 \begin{frame}[fragile]{Metrics Are Attributes}
