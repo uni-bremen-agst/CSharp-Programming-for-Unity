@@ -338,6 +338,72 @@ public SingleGraphPipelineProvider DataProvider = new();
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Three Decisions Make a City}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/NodeLayoutKind.cs
+EvoStreets, Balloon, RectanglePacking, Treemap, CirclePacking,
+Reflexion, IncrementalTreeMap, FromFile
+
+// Assets/SEE/Game/City/EdgeLayoutKind.cs
+None, Straight, Spline, Bundling
+
+// Assets/SEE/Game/City/AbstractSEECity.cs
+public NodeLayoutAttributes NodeLayoutSettings = new();
+public EdgeLayoutAttributes EdgeLayoutSettings = new();
+public NodeTypeVisualsMap NodeTypes = new();
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Where the blocks go, how the arcs between them are drawn, and what a single
+  block looks like are three independent settings. The first two are one choice
+  each out of a fixed set of algorithms. The third is a choice per node type,
+  and hence the only one that grows with the graph.
+\end{frame}
+
+\begin{frame}[fragile]{A Metric per Dimension}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/VisualNodeAttributes.cs -- per node type
+public bool IsRelevant = true;
+public NodeShapes Shape = NodeShapes.Blocks;  // or Cylinders, Bars, ...
+public string WidthMetric  { ... }            // MetricToLength[0]
+public string HeightMetric { ... }            // MetricToLength[1]
+public string DepthMetric  { ... }            // MetricToLength[2]
+public ColorProperty ColorProperty = new();
+public bool ShowNames = false;
+  \end{lstlisting}
+  \vspace{1ex}
+
+  The three edge lengths of a block are not numbers but metric \emph{names}.
+  The renderer looks that attribute up on every node and scales the block
+  between \texttt{MinimalBlockLength} and \texttt{MaximalBlockLength}. Put a
+  different name there and the city means something else, with no line of code
+  touched.
+  \vspace{1ex}
+
+  Color works the same way: \texttt{ColorProperty} either paints by node type,
+  optionally shaded by nesting level, or maps a metric onto a color range.
+\end{frame}
+
+\begin{frame}{And the Other Dials}
+  Beyond the layouts and the blocks, a city carries one settings object per
+  concern, each annotated as on the previous slides and therefore present in
+  the inspector, in the runtime menu and in the configuration file:
+  \begin{itemize}
+    \item \texttt{LabelSettings} and \texttt{TooltipSettings} for what is
+      written next to a node and what appears when it is hovered,
+    \item \texttt{ErosionSettings} for the erosion icons above a node and
+      \texttt{MarkerAttributes} for how added or changed nodes are marked,
+    \item \texttt{MetricToColor} for the color ranges metrics are mapped onto,
+      \texttt{HiddenEdges} and \texttt{EdgeSelectionSettings} for which edges
+      are drawn at all and what selecting one does.
+  \end{itemize}
+  \vspace{1ex}
+
+  None of this is worth memorizing. What is worth knowing is that the answer to
+  \emph{can the user change that} is almost always yes, and that the field
+  named after the concern is where to look.
+\end{frame}
+
 \subsection{Graph Providers}
 
 \begin{frame}[fragile]{Where the Graph Comes From}
