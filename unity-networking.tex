@@ -135,35 +135,6 @@ public class ClientNetworkTransform : NetworkTransform
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{How SEE Uses All of This}
-  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Net/Actions/SetGrabNetAction.cs
-public class SetGrabNetAction : AbstractNetAction
-{
-    public override bool ShouldBeSentToNewClient { get => false; }
-    public string ID;
-    public bool Grab;
-
-    public override void ExecuteOnServer() { ... }
-    public override void ExecuteOnClient() { ... }
-}
-
-// Assets/SEE/Net/ActionNetwork.cs -- how it travels
-[Rpc(SendTo.Server)]
-public void BroadcastActionServerRpc(string serializedAction, ...)
-  \end{lstlisting}
-  \vspace{0.5ex}
-
-  \begin{itemize}
-    \item SEE replicates the \emph{actions} on the world rather than the world:
-      every action a user performs has a net action twin, which is serialized,
-      sent to the server and executed on the other clients.
-    \item \texttt{ShouldBeSentToNewClient} decides whether a peer joining later
-      replays the action. A grab says no, being transient; the actions that
-      built the city say yes.
-  \end{itemize}
-\end{frame}
-
 \begin{exerciseframe}{Which Mechanism?}
   \begin{enumerate}
     \item An avatar's hand pose has to be visible to everyone and changes
@@ -173,9 +144,6 @@ public void BroadcastActionServerRpc(string serializedAction, ...)
       \texttt{NetworkVariable<string>}, and what does SEE do instead?
     \item You drag your own avatar and it snaps back to where it was. What is
       wrong, and which method does SEE override to prevent it?
-    \item A client joins an hour into the session. Which member decides what it
-      gets to see of what happened before, and what does
-      \texttt{SetGrabNetAction} answer?
   \end{enumerate}
 \end{exerciseframe}
 
@@ -191,8 +159,5 @@ public void BroadcastActionServerRpc(string serializedAction, ...)
       the client did. \texttt{ClientNetworkTransform} overrides
       \texttt{OnIsServerAuthoritative} to \texttt{false}
       (\slideref{slide:authority}).
-    \item \texttt{ShouldBeSentToNewClient} of the net action, which the server
-      replays from its list of actions. \texttt{SetGrabNetAction} answers
-      \texttt{false}: who held what an hour ago is of no interest now.
   \end{enumerate}
 \end{solutionframe}
