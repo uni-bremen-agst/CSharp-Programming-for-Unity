@@ -129,6 +129,141 @@ public SingleGraphPipelineProvider DataProvider = new();
   \end{itemize}
 \end{frame}
 
+\subsection{The Graph}
+
+\begin{frame}[fragile]{What a Graph Is Made Of}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/
+// Type inheritance hierarchy:
+Attributable          // attributes, and notification when they change
+  Graph               // the graph as a whole
+  GraphElement        // everything in it that carries attributes
+    Node
+    Edge
+
+// four kinds of attribute, on Graph, Node and Edge alike
+node.SetToggle(name);
+node.SetString(name, value);
+node.SetInt(name, value);
+node.SetFloat("Metric.Lines.LOC", 120);
+node.TryGetFloat("Metric.Lines.LOC", out float loc);
+  \end{lstlisting}
+  \vspace{1ex}
+
+  Nodes and edges carry no fields of their own beyond the structural ones.
+  Everything a node knows about the artifact it stands for is an attribute of
+  one of four kinds, looked up by name, which is why a new analysis can add
+  data without a single change to the model.
+\end{frame}
+
+\begin{frame}[fragile]{Two Structures Over the Same Nodes}
+  \framelabel{slide:twostructures}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/Node.cs -- a tree
+public Node Parent { ... }
+public IList<Node> Children()
+public int Level
+
+// the very same class -- a directed graph
+public ISet<Edge> Outgoings { get; private set; }
+public ISet<Edge> Incomings { get; private set; }
+
+// Assets/SEE/DataModel/DG/Edge.cs -- directed, hence source and target
+public Node Source { get; set; }
+public Node Target { get; set; }
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A node sits in a tree and in a graph at once, and the two are independent.
+  The city renders the tree as nesting --- a class inside a file inside a folder
+  --- and the edges as the arcs between the blocks. Confusing the two is the
+  most common misreading of this model.
+\end{frame}
+
+\begin{frame}[fragile]{Where the Node Hierarchy Comes From}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/AbstractSEECity.cs
+public static HashSet<string> HierarchicalEdgeTypes() => new()
+{
+    "Enclosing", "Belongs_To", "Part_Of", "Defined_In"
+};
+
+// Assets/SEE/DataModel/DG/IO/GXL/GraphReader.cs
+public static async UniTask<Graph> LoadAsync(DataPath path,
+    HashSet<string> hierarchicalEdgeTypes, string basePath, ...)
+  \end{lstlisting}
+  \vspace{1ex}
+
+  GXL knows nodes and directed edges, and nothing else. The tree of
+  \slideref{slide:twostructures} is not in the file: the reader is told which
+  edge types mean containment, and builds the parent-child relation from the
+  edges of those types. Read the same file with a different set and a different
+  tree comes out.
+\end{frame}
+
+\begin{frame}[fragile]{GXL In, GXL Out}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/IO/GXL/GraphWriter.cs
+public static void Save(string filename, Graph graph,
+                        string hierarchicalEdgeType)
+
+// Assets/StreamingAssets/SEE/CodeFacts.gxl.xz
+  \end{lstlisting}
+  \vspace{1ex}
+
+  GXL is an XML dialect for graphs, and the one SEE both reads and writes. The
+  graphs shipped with SEE are compressed, which the reader handles by the file
+  name extension, so a city loads a \texttt{.gxl.xz} without anyone unpacking
+  anything.
+  \vspace{1ex}
+
+  Note the asymmetry: the reader accepts a set of hierarchical edge types,
+  the writer emits one. A graph whose containment came from several types does
+  not survive a round trip unchanged.
+\end{frame}
+
+\begin{frame}[fragile]{Metrics Are Attributes}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/StandardNames.cs
+public const string Prefix = "Metric.";
+public const string Lines  = Prefix + "Lines.";
+public const string LOC    = Lines + "LOC";
+public const string McCabe = Prefix + "McCabe_Complexity";
+
+// Assets/SEE/DataModel/DG/IO/CSV/MetricImporter.cs
+public static async UniTask<int> LoadCsvAsync(Graph graph, DataPath path,
+    char separator = ';', ...)
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A metric is a float attribute whose name begins with \texttt{Metric.}, and
+  that convention is the whole mechanism: the CSV importer matches rows to
+  nodes by ID and sets such attributes, the Axivion and JaCoCo importers add
+  theirs under their own prefixes, and a city then maps a metric name to a
+  visual dimension such as height or color.
+\end{frame}
+
+\begin{frame}[fragile]{The Graph Knows Nothing of Unity}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/DataModel/DG/GraphElementExtensions.cs
+public static bool HasGameObject(this GraphElement element)
+    => GraphElementIDMap.Has(element.ID);
+
+public static GameObject GameObject(this GraphElement element,
+                                    bool mustFind = false)
+  \end{lstlisting}
+  \vspace{1ex}
+
+  No class in \texttt{DataModel/DG} derives from \texttt{MonoBehaviour} or
+  touches a \texttt{GameObject}. The model is plain C\#, which is why the tests
+  can load a real graph and check it without ever entering play mode.
+  \vspace{1ex}
+
+  The single bridge to the scene is the ID: a map from element ID to game
+  object, asked for through these two extension methods. Everything the city
+  does starts by crossing that bridge.
+\end{frame}
+
 \subsection{Graph Providers}
 
 \begin{frame}[fragile]{Where the Graph Comes From}
