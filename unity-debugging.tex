@@ -218,15 +218,76 @@ finally { Profiler.EndThreadProfiling(); }
   \end{itemize}
 \end{frame}
 
+\begin{frame}{A Profiler That Sees Every Thread}
+  \framelabel{slide:dottrace}
+  \begin{itemize}
+    \item dotTrace is JetBrains' profiler for .NET. It attaches to a process and
+      samples every managed thread, so the thread-pool work of the previous
+      slide shows up without a single marker being added to the code.
+    \item It is free for students: the JetBrains educational license covers
+      dotUltimate, and dotTrace is part of it. It is the same application you
+      apply for to get Rider.
+    \item Its Timeline type records what each thread did over time --- running,
+      waiting for a lock, blocked in file I/O, collecting garbage --- which is
+      the view an asynchronous load calls for.
+    \item Division of labor: Unity's Profiler says which frame was late and what
+      it allocated, dotTrace says where the managed time went across all
+      threads. Neither replaces the other.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Confining a Capture to One Operation}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs
+using (DeepProfiler.Capture("TestReadingRealBigGraph"))
+{
+    await LoadGraphAsync(path);
+}
+
+// Assets/SEE/Utils/DeepProfiler.cs -- when the two ends are apart
+DeepProfiler.Start("loading city");
+...
+DeepProfiler.Save();
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item Every method transitively called within the scope is profiled, none of
+      them individually instrumented, and the snapshot covers that section
+      alone instead of the whole session.
+    \item The scope may enclose an \texttt{await}: it is disposed wherever the
+      continuation resumes, hence it spans the frames the operation really took.
+    \item With no profiler attached, these calls do nothing beyond one warning,
+      which is why they may stay in the code.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Getting the Snapshot}
+  \begin{enumerate}
+    \item In dotTrace, under \emph{New Process Run}, add an entry whose Path is
+      the Unity executable and whose Arguments carry
+      \texttt{-projectpath} with this project. In the \emph{Advanced Options},
+      set \emph{Control profiling} to \emph{Using API}.
+    \item That one setting decides whether any of this works. With dotTrace's
+      default, \emph{Manual control}, the API is inert: the console then reports
+      that no profiler is attached and no snapshot is written.
+    \item Run the entry, which starts Unity under the profiler, and trigger the
+      code --- the test above from the Test Runner, say. The console reports the
+      snapshot as saved and it appears in dotTrace's controller window.
+  \end{enumerate}
+  \vspace{1ex}
+
+  \hint{Only one editor can run per project, so close a running one first. The
+  profiling type hardly matters here; the Timeline type of the Unity preset
+  works.}
+\end{frame}
+
 \begin{exerciseframe}{Which Tool?}
   \begin{enumerate}
     \item Loading a city takes nine seconds. Which measurement would you
       reach for, and why is the Profiler the wrong one?
     \item The frame rate drops, but only while a node is being dragged.
       Which tool now, and which column?
-    \item A test exercises a method that logs an error on purpose. The method
-      behaves correctly, yet the test is red. What happened, and what is the
-      fix?
     \item You profile the loading of a code city with Deep Profile on and find
       no expensive method anywhere, although loading plainly takes seconds.
       Where did the time go?
@@ -242,10 +303,6 @@ finally { Profiler.EndThreadProfiling(); }
     \item The Profiler, recording while you drag, and the \emph{GC Alloc}
       column first: a drop that appears only during an interaction is usually
       something allocating per frame in the path that the interaction takes.
-    \item The Unity Test Framework treats any logged error during a test as a
-      failure. Declare it with \texttt{LogAssert.Expect} before the call
-      (\slideref{slide:console}), which both fixes the test and documents that
-      the error belongs there.
     \item Onto a thread the Profiler does not sample. The parsers begin with
       \texttt{await UniTask.SwitchToThreadPool()}, and a thread from the .NET
       thread pool gets no row until the code asks for one with
