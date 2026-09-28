@@ -1,0 +1,198 @@
+%%% -*- coding: utf-8 -*-
+% !TeX root = main-slides.tex
+
+\lecture{Networking}{unity-networking}
+\section{Networking}
+
+\showtitlepage{Netcode for GameObjects}
+
+\begin{frame}{One Program, Several Roles}
+  \framelabel{slide:roles}
+  \begin{itemize}
+    \item Netcode for GameObjects replicates GameObjects across the peers of a
+      session. One peer is the server; a \emph{host} is server and client in one
+      process, which is how SEE is usually run.
+    \item The same script runs on every peer. A networked script therefore has
+      to ask which role it is in, and SEE does so throughout:
+      \texttt{IsServer}, \texttt{IsHost}, \texttt{IsClient},
+      \texttt{IsOwner}.
+    \item Only a GameObject carrying a \texttt{NetworkObject} component takes
+      part at all, and only its \texttt{NetworkBehaviour} components can
+      replicate anything.
+    \item There are two mechanisms and no more: state that replicates itself
+      (\texttt{NetworkVariable}) and calls that travel to other peers (RPCs).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{NetworkBehaviour}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/ActionNetwork.cs
+public class ActionNetwork : NetworkBehaviour
+{
+    public override void OnNetworkSpawn() { ... }
+}
+
+// Assets/SEE/Game/Avatars/PlayerName.cs
+private void Start()   // not OnNetworkSpawn: for a dynamically
+{                      // spawned object, Start runs after it
+    if (IsLocalPlayer) { ... }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item A \texttt{NetworkBehaviour} is a \texttt{MonoBehaviour} with the
+      network lifecycle added. \texttt{OnNetworkSpawn} and
+      \texttt{OnNetworkDespawn} bracket the time the object is replicated, which
+      is not the same span as \texttt{Awake} to \texttt{OnDestroy}.
+    \item The order bites: for a dynamically spawned object \texttt{Start} runs
+      \emph{after} \texttt{OnNetworkSpawn}, which is why \texttt{PlayerName}
+      waits until \texttt{Start} for data the server fills in while spawning.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{NetworkVariable}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Avatars/AvatarHandAnimationsSync.cs
+private readonly NetworkVariable<Vector3> leftHandPosition
+    = new(writePerm: NetworkVariableWritePermission.Owner);
+
+// the owner writes, every other peer only reads
+if (IsOwner)
+{
+    CaptureFromHandsAnimator();   // assigns .Value
+}
+else { ... }                      // reads .Value
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item A \texttt{NetworkVariable<T>} replicates its \texttt{Value} to every
+      peer whenever it changes. Reading is always allowed, writing needs the
+      permission given at construction: the server by default, or the owner.
+    \item SEE hands the hand poses to the owner, because they come from that
+      user's webcam, and the peers that do not own the avatar only read.
+    \item \texttt{T} has to be something Netcode can serialize without
+      allocating, such as \texttt{Vector3}, \texttt{Quaternion},
+      \texttt{float} or a \texttt{FixedString}. Plain \texttt{string} is not
+      among them.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Remote Procedure Calls}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/Avatars/PlayerName.cs
+[Rpc(SendTo.Server)]
+private void RequestPlayerNameFromServerRpc(ulong networkObjectId,
+                                            RpcParams rpcParams = default)
+{
+    ulong senderClientId = rpcParams.Receive.SenderClientId;
+    string playerName = PlayerNameMap.GetPlayerName(networkObjectId);
+    SendPlayerNameToClientRpc(networkObjectId, playerName,
+        RpcTarget.Single(senderClientId, RpcTargetUse.Temp));
+}
+[Rpc(SendTo.SpecifiedInParams)]
+void SendPlayerNameToClientRpc(ulong networkObjectId,
+                               string playerName, RpcParams _)
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item \texttt{[Rpc]} marks a method that is called on one peer and runs on
+      others, chosen by \texttt{SendTo}. The name must end in \texttt{Rpc}; the
+      compiler insists on it and generates the transport.
+    \item The optional \texttt{RpcParams} carry who sent the call, and let the
+      server answer that one client alone. Here a client asks the server for a
+      name and the server sends it back, a round trip in two methods.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Ownership and Authority}
+  \framelabel{slide:authority}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/ClientNetworkTransform.cs
+public class ClientNetworkTransform : NetworkTransform
+{
+    // Owner client only. This imposes state to the server.
+    protected override bool OnIsServerAuthoritative()
+    {
+        return false;
+    }
+}
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item Ownership belongs to the \texttt{NetworkObject}: exactly one peer owns
+      it, the server unless stated otherwise, while a player's avatar is owned
+      by that player's client.
+    \item Authority is the question of who may change what. A
+      \texttt{NetworkTransform} is server-authoritative by default, so a client
+      moving its own avatar would see it corrected back.
+    \item SEE overrides that, and its own comment names the price: the owning
+      client imposes the transform on the server, which means trusting clients,
+      so nothing security-sensitive may ride on it.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{How SEE Uses All of This}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Net/Actions/SetGrabNetAction.cs
+public class SetGrabNetAction : AbstractNetAction
+{
+    public override bool ShouldBeSentToNewClient { get => false; }
+    public string ID;
+    public bool Grab;
+
+    public override void ExecuteOnServer() { ... }
+    public override void ExecuteOnClient() { ... }
+}
+
+// Assets/SEE/Net/ActionNetwork.cs -- how it travels
+[Rpc(SendTo.Server)]
+public void BroadcastActionServerRpc(string serializedAction, ...)
+  \end{lstlisting}
+  \vspace{0.5ex}
+
+  \begin{itemize}
+    \item SEE replicates the \emph{actions} on the world rather than the world:
+      every action a user performs has a net action twin, which is serialized,
+      sent to the server and executed on the other clients.
+    \item \texttt{ShouldBeSentToNewClient} decides whether a peer joining later
+      replays the action. A grab says no, being transient; the actions that
+      built the city say yes.
+  \end{itemize}
+\end{frame}
+
+\begin{exerciseframe}{Which Mechanism?}
+  \begin{enumerate}
+    \item An avatar's hand pose has to be visible to everyone and changes
+      continuously while the hand moves. Which of the two mechanisms, and who
+      is allowed to write?
+    \item A player's name is a \texttt{string}. Why can it not be a
+      \texttt{NetworkVariable<string>}, and what does SEE do instead?
+    \item You drag your own avatar and it snaps back to where it was. What is
+      wrong, and which method does SEE override to prevent it?
+    \item A client joins an hour into the session. Which member decides what it
+      gets to see of what happened before, and what does
+      \texttt{SetGrabNetAction} answer?
+  \end{enumerate}
+\end{exerciseframe}
+
+\begin{solutionframe}{Which Mechanism?}
+  \begin{enumerate}
+    \item A \texttt{NetworkVariable}, written by the owner: continuous state
+      that everyone reads is what it is for, and an RPC per frame per joint
+      would be traffic for nothing.
+    \item Netcode replicates a \texttt{NetworkVariable} without allocating, so
+      \texttt{T} cannot be a reference type. RPC parameters may be strings,
+      hence \texttt{PlayerName} requests the name from the server instead.
+    \item The transform is server-authoritative, so the server corrects what
+      the client did. \texttt{ClientNetworkTransform} overrides
+      \texttt{OnIsServerAuthoritative} to \texttt{false}
+      (\slideref{slide:authority}).
+    \item \texttt{ShouldBeSentToNewClient} of the net action, which the server
+      replays from its list of actions. \texttt{SetGrabNetAction} answers
+      \texttt{false}: who held what an hour ago is of no interest now.
+  \end{enumerate}
+\end{solutionframe}
