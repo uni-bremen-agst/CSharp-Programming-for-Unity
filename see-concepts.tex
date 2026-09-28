@@ -180,13 +180,40 @@ public Node Target { get; set; }
   most common misreading of this model.
 \end{frame}
 
-\begin{frame}[fragile]{Where the Node Hierarchy Comes From}
+\begin{frame}[fragile]{Types Are Just Strings}
+  \framelabel{slide:types}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Game/City/AbstractSEECity.cs
+// Assets/SEE/DataModel/DG/GraphElement.cs
+public string Type { ... }      // every node and every edge has one
+
+// Assets/SEE/DataModel/DG/Graph.cs -- read off the data, not declared
+internal HashSet<string> AllNodeTypes()
+    => Nodes().Select(n => n.Type).ToHashSet();
+internal HashSet<string> AllEdgeTypes()
+    => Edges().Select(e => e.Type).ToHashSet();
+  \end{lstlisting}
+  \vspace{1ex}
+
+  A type is a string that arrived with the input, and SEE prescribes no
+  vocabulary for it. \texttt{Class} and \texttt{Calls} are what an analysis of
+  a program happens to emit; a graph of database tables could just as well use
+  \texttt{Table} and \texttt{Foreign\_Key}, and nothing in the model would
+  notice. Which types occur is therefore a question to the graph, not to SEE.
+  \vspace{1ex}
+
+  Almost: a few places do name a type, among them \texttt{File},
+  \texttt{Directory} and \texttt{Clone}. They are few enough to count, and they
+  are the exceptions that prove the rule.
+\end{frame}
+
+\begin{frame}[fragile]{The User Says Which Types Nest}
+  \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+// Assets/SEE/Game/City/AbstractSEECity.cs -- a setting, not a law
+[OdinSerialize, Tooltip("Edge types of hierarchical edges.")]
+public HashSet<string> HierarchicalEdges = HierarchicalEdgeTypes();
+
 public static HashSet<string> HierarchicalEdgeTypes() => new()
-{
-    "Enclosing", "Belongs_To", "Part_Of", "Defined_In"
-};
+{ "Enclosing", "Belongs_To", "Part_Of", "Defined_In" };
 
 // Assets/SEE/DataModel/DG/IO/GXL/GraphReader.cs
 public static async UniTask<Graph> LoadAsync(DataPath path,
@@ -196,9 +223,27 @@ public static async UniTask<Graph> LoadAsync(DataPath path,
 
   GXL knows nodes and directed edges, and nothing else. The tree of
   \slideref{slide:twostructures} is not in the file: the reader is told which
-  edge types mean containment, and builds the parent-child relation from the
+  edge types mean containment and builds the parent-child relation from the
   edges of those types. Read the same file with a different set and a different
   tree comes out.
+\end{frame}
+
+\begin{frame}{Which Types Matter Is Configured}
+  Both questions one can ask about types are answered by the user rather than
+  by the code, and both are ordinary city settings, editable in the inspector
+  and in the runtime configuration menu:
+  \begin{itemize}
+    \item \texttt{HierarchicalEdges} names the edge types that mean
+      containment. The four defaults are what the analyses SEE usually consumes
+      happen to emit, nothing more.
+    \item \texttt{NodeTypes} maps each node type to its visual attributes,
+      among them whether nodes of that type are relevant at all. A city can
+      hence hide every method or paint every interface differently.
+  \end{itemize}
+  \vspace{1ex}
+
+  The map is keyed by the types found in the graph
+  (\slideref{slide:types}), so it fills itself once a graph is loaded.
 \end{frame}
 
 \begin{frame}[fragile]{GXL In, GXL Out}
