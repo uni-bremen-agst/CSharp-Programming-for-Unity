@@ -135,14 +135,15 @@ p.End();
   \hint{\textit{Performance} is a class written by SEE developers.}
 \end{frame}
 
-\begin{frame}[fragile]{An Async Method Has No Row}
+\begin{frame}[fragile]{An Async Method Has No Row in the Unity Profiler}
   \framelabel{slide:asyncprofiling}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GraphsReader.cs, in LoadAsync
+// Assets/SEE/GraphProviders/Evolution/GXLEvolutionGraphProvider.cs,
+// in the nested class GraphsReader
 foreach (string gxlPath in sortedGraphNames)
 {
-    await graphCreator.LoadAsync(...);
-    await MetricImporter.LoadCsvAsync(graph, csvFilename);
+    DataPath dataPath = new() { Path = gxlPath };
+    await graphCreator.LoadAsync(await dataPath.LoadAsync(), dataPath.Path);
 }
 
 // ... and what the Profiler shows of it: one entry per piece
