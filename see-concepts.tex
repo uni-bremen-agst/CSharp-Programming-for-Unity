@@ -34,7 +34,7 @@
 
 \begin{frame}[fragile]{What a Graph Is Made Of}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/
+// Assets/SEE/Graphs/Core/
 // Type inheritance hierarchy:
 Attributable          // attributes, and notification when they change
   Graph               // the graph as a whole
@@ -60,7 +60,7 @@ node.TryGetFloat("Metric.Lines.LOC", out float loc);
 \begin{frame}[fragile]{Two Structures Over the Same Nodes}
   \framelabel{slide:twostructures}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/Node.cs -- a tree
+// Assets/SEE/Graphs/Core/Node.cs -- a tree
 public Node Parent { ... }
 public IList<Node> Children()
 public int Level
@@ -69,7 +69,7 @@ public int Level
 public ISet<Edge> Outgoings { get; private set; }
 public ISet<Edge> Incomings { get; private set; }
 
-// Assets/SEE/DataModel/DG/Edge.cs -- directed, hence source and target
+// Assets/SEE/Graphs/Core/Edge.cs -- directed, hence source and target
 public Node Source { get; set; }
 public Node Target { get; set; }
   \end{lstlisting}
@@ -83,10 +83,10 @@ public Node Target { get; set; }
 \begin{frame}[fragile]{Types Are Just Strings}
   \framelabel{slide:types}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/GraphElement.cs
+// Assets/SEE/Graphs/Core/GraphElement.cs
 public string Type { ... }      // every node and every edge has one
 
-// Assets/SEE/DataModel/DG/Graph.cs -- read off the data, not declared
+// Assets/SEE/Graphs/Core/Graph.cs -- read off the data, not declared
 internal HashSet<string> AllNodeTypes()
     => Nodes().Select(n => n.Type).ToHashSet();
 internal HashSet<string> AllEdgeTypes()
@@ -135,7 +135,7 @@ public NodeTypeVisualsMap NodeTypes = new();
 
 \begin{frame}[fragile]{GXL In, GXL Out}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GraphWriter.cs
+// Assets/SEE/Graphs/IO/GXL/GraphWriter.cs
 public static void Save(string filename, Graph graph,
                         string hierarchicalEdgeType)
 
@@ -158,7 +158,7 @@ public static void Save(string filename, Graph graph,
 
 \begin{frame}[fragile]{The Tree Is Not in the File}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GraphReader.cs
+// Assets/SEE/Graphs/IO/GXL/GraphReader.cs
 public static async UniTask<Graph> LoadAsync(DataPath path,
     HashSet<string> hierarchicalEdgeTypes, string basePath, ...)
   \end{lstlisting}
@@ -178,13 +178,13 @@ public static async UniTask<Graph> LoadAsync(DataPath path,
 
 \begin{frame}[fragile]{Metrics Are Attributes}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/StandardNames.cs
+// Assets/SEE/Graphs/Core/StandardNames.cs
 public const string Prefix = "Metric.";
 public const string Lines  = Prefix + "Lines.";
 public const string LOC    = Lines + "LOC";
 public const string McCabe = Prefix + "McCabe_Complexity";
 
-// Assets/SEE/DataModel/DG/IO/CSV/MetricImporter.cs
+// Assets/SEE/Graphs/IO/CSV/MetricImporter.cs
 public static async UniTask<int> LoadCsvAsync(Graph graph, DataPath path,
     char separator = ';', ...)
   \end{lstlisting}
@@ -199,7 +199,7 @@ public static async UniTask<int> LoadCsvAsync(Graph graph, DataPath path,
 
 \begin{frame}[fragile]{Where the Code Is}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/GraphElement.cs -- nodes and edges alike
+// Assets/SEE/Graphs/Core/GraphElement.cs -- nodes and edges alike
 public string Directory { ... }     // "Source.Path"
 public string Filename  { ... }     // "Source.File"
 public string Path()                // the two of them combined
@@ -207,7 +207,7 @@ public int? SourceLine   { ... }    // "Source.Line"
 public int? SourceColumn { ... }    // "Source.Column"
 public Range SourceRange { ... }
 
-// Assets/SEE/DataModel/DG/Node.cs
+// Assets/SEE/Graphs/Core/Node.cs
 public string SourceName { ... }
   \end{lstlisting}
   \vspace{1ex}
@@ -220,7 +220,7 @@ public string SourceName { ... }
 
 \begin{frame}[fragile]{The Graph Knows Nothing of Unity}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/GraphElementExtensions.cs
+// Assets/SEE/Utils/GraphElementExtensions.cs
 public static bool HasGameObject(this GraphElement element)
     => GraphElementIDMap.Has(element.ID);
 
@@ -229,7 +229,7 @@ public static GameObject GameObject(this GraphElement element,
   \end{lstlisting}
   \vspace{1ex}
 
-  No class in \texttt{DataModel/DG} derives from \texttt{MonoBehaviour} or
+  No class in \texttt{Graphs} derives from \texttt{MonoBehaviour} or
   touches a \texttt{GameObject}. The model is plain C\#, which is why the tests
   can load a real graph and check it without ever entering play mode.
   \vspace{1ex}

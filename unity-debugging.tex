@@ -116,11 +116,10 @@ Performance p = Performance.Begin("loading graph data");
 ...
 p.End(true); // prints the action and the milliseconds it took
 
-// Assets/SEE/DataModel/DG/IO/GXL/GraphsReader.cs
-Performance.Begin($"Loading GXL files from {directory}");
-
-// Assets/SEE/Game/CityRendering/GraphRenderer.cs
+// Example usage in Assets/SEE/Game/CityRendering/GraphRenderer.cs
 Performance.Begin($"Node layout {Settings.NodeLayoutSettings.Kind} ...");
+... // Layout is calculated
+p.End();
   \end{lstlisting}
   \vspace{1ex}
 
@@ -194,7 +193,7 @@ marker.End();
 \begin{frame}[fragile]{The Work You Cannot See}
   \framelabel{slide:offthread}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs
+// Assets/SEE/Graphs/IO/GXL/GXLParser.cs
 await UniTask.SwitchToThreadPool();
 while (await Reader.ReadAsync())   // the whole parse, off the main thread
 {
@@ -238,7 +237,7 @@ finally { Profiler.EndThreadProfiling(); }
 
 \begin{frame}[fragile]{Confining a Capture to One Operation}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs
+// Assets/SEETests/Graphs/IO/TestGraphIO.cs
 using (DeepProfiler.Capture("TestReadingRealBigGraph"))
 {
     await LoadGraphAsync(path);

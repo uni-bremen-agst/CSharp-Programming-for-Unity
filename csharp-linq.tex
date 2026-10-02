@@ -147,7 +147,7 @@ graph.Nodes().GroupBy(ElementToString)
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// DataModel/DG/GraphElementExtensions.cs
+// Utils/GraphElementExtensions.cs
 public static IEnumerable<T> WithGameObject<T>
     (this IEnumerable<T> elements) where T : GraphElement
   => elements.Where(HasGameObject);

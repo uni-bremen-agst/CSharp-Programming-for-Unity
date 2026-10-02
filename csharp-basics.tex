@@ -357,7 +357,7 @@ int i = 42;
 object boxed = i;        // boxing: 42 is copied onto the heap
 int back = (int)boxed;   // unboxing: copied back, checked at run time
 
-// Assets/SEE/Utils/Config/ConfigIO.cs -- config values travel as object
+// Assets/SEE/Graphs/Config/ConfigIO.cs -- config values travel as object
 public static bool Restore<T>(Dictionary<string, object> attributes,
                               string label, ref T value)
 {
@@ -1492,7 +1492,7 @@ where T : class                     // any reference type
 
 \begin{frame}[fragile]{One Algorithm, Two Element Types}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/MergeDiffGraphExtension.cs
+// Assets/SEE/Graphs/Core/MergeDiffGraphExtension.cs
 private static void MergeGraphElements<T>(ISet<T> added, ISet<T> removed,
         ISet<T> changed, Action<T> addToGraph, Graph baseline)
     where T : GraphElement

@@ -62,7 +62,7 @@ FieldInfo hidden = actual.GetField("graph",            // everything else has
 
 \begin{frame}[fragile]{From a Type to an Object}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/Attributable.cs -- clone without knowing what
+// Assets/SEE/Graphs/Core/Attributable.cs -- clone without knowing what
 Attributable clone = (Attributable)Activator.CreateInstance(GetType());
 
 // Assets/SEE/Net/Actions/AbstractNetAction.cs -- the type travels as text
@@ -378,7 +378,7 @@ foreach (MethodInfo method in city.GetType().GetMethods())
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/
+// Assets/SEE/Graphs/IO/ReportImports/
 public abstract class ParsingConfig
 {
   public string ToolId = string.Empty;    // "JaCoCo", "Checkstyle", ...

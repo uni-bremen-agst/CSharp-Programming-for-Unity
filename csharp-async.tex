@@ -548,7 +548,7 @@ public override async UniTask<Graph> ProvideAsync
   return await GraphReader.LoadAsync(Path, ..., token);
 }
 
-// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs -- GraphReader extends it, so
+// Assets/SEE/Graphs/IO/GXL/GXLParser.cs -- GraphReader extends it, so
 // the call above lands in the XML read loop of its base class, which does:
 token.ThrowIfCancellationRequested();            // at every XML node
 
@@ -817,7 +817,7 @@ await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
 \begin{frame}[fragile]{Leaving and Returning to the Main Thread}
   \framelabel{slide:mainthread}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs
+// Assets/SEE/Graphs/IO/GXL/GXLParser.cs
 try
 {
   await UniTask.SwitchToThreadPool();      // parsing is pure CPU work
@@ -1147,7 +1147,7 @@ lock (first)                     lock (second)
 
 \begin{frame}[fragile]{Prefer a Concurrent Collection}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/Utils/ThreadSafeHashSet.cs: a set from a dictionary
+// Assets/SEE/Graphs/Utils/ThreadSafeHashSet.cs: a set from a dictionary
 private readonly ConcurrentDictionary<T, bool> content = new();
 public bool Add(T item) { return content.TryAdd(item, true); }
 
@@ -1174,7 +1174,7 @@ while (unhandledDiagnostics.TryDequeue(out PublishDiagnosticsParams d))
 
 \begin{frame}[fragile]{The Cheapest Thread-Safety Is Not Sharing}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEE/DataModel/DG/IO/GXL/GXLParser.cs, in essence
+// Assets/SEE/Graphs/IO/GXL/GXLParser.cs, in essence
 try
 {
   await UniTask.SwitchToThreadPool();

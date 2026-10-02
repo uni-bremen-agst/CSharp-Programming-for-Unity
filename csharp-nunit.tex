@@ -481,7 +481,7 @@ public void TestBasename(string path, string expected)
 
 \begin{frame}[fragile]{Parameterized Tests: Values and Sources}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs: values at the parameter
+// Assets/SEETests/Graphs/IO/TestGraphIO.cs: values at the parameter
 [Test, Sequential]
 public async Task TestGraphWriter([Values(true, false)] bool compress)
 { ... }
@@ -1046,7 +1046,7 @@ public IEnumerator TestMenuOption1()
 
 \begin{frame}[fragile]{Asynchronous Code in Tests}
     \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        // Assets/SEETests/DataModel/DG/IO/TestGraphIO.cs
+        // Assets/SEETests/Graphs/IO/TestGraphIO.cs
         // NUnit awaits a Task directly
         [Test, Sequential]
         public async Task TestGraphWriter([Values(true, false)] bool compress)
@@ -1072,10 +1072,9 @@ public IEnumerator TestMenuOption1()
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
     \item One fixture per class under test, named \texttt{Test} plus the name of
-      that class: \texttt{TestGraph} for \texttt{Graph}, \texttt{TestUnionFind}
-      for \texttt{UnionFind}.
+      that class: \texttt{TestUnionFind} for \texttt{UnionFind}.
     \item The fixture lives in the \emph{same namespace} as the class it tests,
-      which is why \texttt{TestGraph} sits in \texttt{SEE.DataModel.DG}. That
+      which is why \texttt{TestUnionFind} sits in \texttt{SEE.Utils}. That
       grants it access to \texttt{internal} members without any trickery.
     \item Fixtures are \texttt{internal} unless a derived fixture in another
       namespace needs them.

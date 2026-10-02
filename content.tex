@@ -44,7 +44,7 @@ Part B — Advanced C#
 %Asynchronous programming: async/await, Task, cancellation tokens
 %UniTask (com.cysharp.unitask) — Unity-friendly alternative to Task, used to avoid GC allocations in coroutine-like code
 %Delegates, events, and the observer pattern (heavily used for decoupled game-state notifications)
-%Reflection & attributes (custom attributes drive serialization/config in DataModel/DG)
+%Reflection & attributes (custom attributes drive serialization/config in Graphs)
 %Design patterns: Factory, Strategy, Command (action system in Controls/Actions)
 %Generics & constraints for reusable algorithms
 %Memory management & performance: structs vs. classes, boxing, allocation avoidance in per-frame code
@@ -74,7 +74,7 @@ Addressables/Resources & asset streaming (StreamingAssets, prefab loading at run
 Build pipeline across platforms (desktop + VR headsets), player settings, XR provider configuration
 
 Part E — Project-Domain-Specific Skills
-%Graph data structures & algorithms: directed graphs, the project's own DataModel/DG model, GXL import/export, Software metrics
+%Graph data structures & algorithms: directed graphs, the project's own Graphs model, GXL import/export, Software metrics
 %graph providers
 %Software-visualization concepts: code-city metaphor, node/edge/graph rendering, treemap/rectangle-packing/incremental-treemap layout algorithms
 reflexion analysis (architecture-conformance checking)
@@ -94,7 +94,7 @@ Time	Block	Length
 14:30–16:00	Exercise (Practice)	90 min
 
 Day 1 — C# Foundations for Unity
-09:00 Theory: Unity Editor workflow, GameObject/Component/Prefab model, MonoBehaviour lifecycle, ScriptableObjects for data-driven config (general Unity literacy) — then a short contrast segment: SEE itself does not use ScriptableObjects anywhere in Assets/SEE; instead it configures things via plain [Serializable] attribute classes (e.g. LayoutSettings.cs → VisualAttributes.cs) read/written through its own IO layer (DataModel/DG/IO, Layout/IO), rather than as Unity asset instances.
+09:00 Theory: Unity Editor workflow, GameObject/Component/Prefab model, MonoBehaviour lifecycle, ScriptableObjects for data-driven config (general Unity literacy) — then a short contrast segment: SEE itself does not use ScriptableObjects anywhere in Assets/SEE; instead it configures things via plain [Serializable] attribute classes (e.g. LayoutSettings.cs → VisualAttributes.cs) read/written through its own IO layer (Graphs/IO, Layout/IO), rather than as Unity asset instances.
 10:45 Exercise: Two-part — (a) the original ScriptableObject config asset exercise for general Unity fluency, then (b) re-implement the same config as a plain [Serializable] class following SEE's own pattern, so students see both side by side and understand why the project chose the latter (config lives in human-editable text files, not binary .asset files, which matters for version control and headless/CLI use).
 
 13:00 Theory: Delegates & events, Observer/Strategy/Factory patterns (mirrors Controls/Actions action-type system); async/await and UniTask basics.
