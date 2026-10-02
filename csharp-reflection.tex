@@ -33,6 +33,8 @@
   know which action arrived.}
 \end{frame}
 
+\subsection{The Type Object}
+
 \begin{frame}[fragile]{The \texttt{Type} Object}
   \framelabel{slide:typeobject}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -59,6 +61,8 @@ FieldInfo hidden = actual.GetField("graph",            // everything else has
       is not an error but a \texttt{null}.
   \end{itemize}
 \end{frame}
+
+\subsection{Instantiation and Invocation}
 
 \begin{frame}[fragile]{From a Type to an Object}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -112,6 +116,8 @@ bool yes = (bool)hover.Invoke(city, null);      // a boxed bool
       \texttt{(long)} on a boxed \texttt{int} throws.
   \end{itemize}
 \end{frame}
+
+\subsection{Annotations}
 
 \begin{frame}[fragile]{Annotations Are Data}
   \framelabel{slide:attributes}
@@ -169,6 +175,8 @@ string name = member.GetCustomAttributes().OfType<RuntimeTabAttribute>()
       the next exercises, so are you.
   \end{itemize}
 \end{frame}
+
+\subsection{Odin}
 
 \begin{frame}[fragile]{What Odin Is}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -251,6 +259,8 @@ if (m != null && m.ReturnType == typeof(bool))   // the check the compiler
   \end{itemize}
 \end{frame}
 
+\subsection{The Cost of Reflection}
+
 \begin{frame}{What Reflection Costs}
   It buys you decisions that the compiler cannot make, and it pays for them
   with everything the compiler would have given you.
@@ -270,6 +280,8 @@ if (m != null && m.ReturnType == typeof(bool))   // the check the compiler
       is one --- and then exists in the editor but not in the player.
   \end{itemize}
 \end{frame}
+
+\subsection{Exercises}
 
 \begin{exerciseframe}{Fields from the Environment}
   SEE can set a field from an environment variable, so that a machine can be

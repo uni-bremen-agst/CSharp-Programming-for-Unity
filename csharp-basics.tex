@@ -25,6 +25,8 @@
   \end{itemize}
 \end{frame}
 
+\subsection{Naming Conventions}
+
 \begin{frame}{Naming Conventions}
   \begin{itemize}
     \item Java: \texttt{camelCase} for methods and fields,
@@ -36,6 +38,8 @@
       see below) or \texttt{GetScore()} in C\#.
   \end{itemize}
 \end{frame}
+
+\subsection{Properties}
 
 \begin{frame}[fragile]{Properties Instead of Getters/Setters}
   \begin{columns}[T]
@@ -65,6 +69,8 @@ public int Score {
 public int Score { get; set; }
       \end{lstlisting}
   \end{columns}
+  \vspace{3ex}
+
   Properties look like fields to the caller (\texttt{obj.Score = 3;})
   but behave like methods.
 \end{frame}
@@ -211,6 +217,8 @@ public bool IsEmpty
   tell \texttt{IsEmpty} from a field.}
 \end{solutionframe}
 
+\subsection{Value Types and Reference Types}
+
 \begin{frame}{Value Types vs.\ Reference Types}
   \framelabel{slide:valuetypes}
   \begin{itemize}
@@ -350,6 +358,8 @@ transform.position =
   precisely the pattern above.}
 \end{solutionframe}
 
+\subsection{Boxing}
+
 \begin{frame}[fragile]{Boxing: When a Value Becomes an Object}
   \framelabel{slide:boxing}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -413,6 +423,8 @@ public static bool Restore<T>(Dictionary<string, object> attributes,
       with structs, with a heap allocation added.
   \end{enumerate}
 \end{solutionframe}
+
+\subsection{Nullability}
 
 \begin{frame}{Nullability}
   \begin{itemize}
@@ -516,6 +528,8 @@ int length = person?.Home?.Zip?.Length ?? -1;
   \hint{\texttt{?.} guards method calls as well, e.g.\ \texttt{list?.Clear()}.}
 \end{solutionframe}
 
+\subsection{Namespaces and Assemblies}
+
 \begin{frame}{Namespaces and Packages}
   \begin{itemize}
     \item Java: package name must match the directory structure; one
@@ -547,6 +561,8 @@ int length = person?.Home?.Zip?.Length ?? -1;
   happens per assembly, splitting a project into several of them also shortens
   recompile times.}
 \end{frame}
+
+\subsection{Types and Files}
 
 \begin{frame}[fragile]{Partial Classes: One Type, Multiple Files}
   \framelabel{slide:partial}
@@ -608,58 +624,6 @@ public partial class Player
   \hint{Let type and file name match even where the compiler does not care.
   Readers, IDE navigation, reviews and diffs all rely on finding \texttt{Foo}
   in \texttt{Foo.cs}.}
-\end{frame}
-
-\begin{frame}{Access Modifiers}
-  \framelabel{slide:access}
-  \begin{itemize}
-    \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
-      and \emph{package-private} (the default -- no keyword).
-    \item C\#: \texttt{public}, \texttt{protected}, \texttt{private},
-      \texttt{internal} (visible within the whole assembly, not just a
-      folder/package), plus combinations
-      \texttt{protected internal} and \texttt{private protected} (see below).
-    \item C\# has no direct equivalent of Java's package-private; the
-      default access (with no modifier) is \texttt{private} for members
-      and \texttt{internal} for top-level types.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Access Modifiers: The Two Combinations}
-  \begin{itemize}
-    \item \texttt{protected internal} means protected \emph{or} internal and is
-      therefore \emph{wider} than either part alone: the whole assembly plus
-      derived classes everywhere.
-    \item \texttt{private protected} means protected \emph{and} internal and is
-      therefore \emph{narrower} than either part alone: only derived classes
-      within the same assembly.
-  \end{itemize}
-  \vspace{1ex}
-
-  \begin{center}
-    \footnotesize
-    \begin{tabular}{lcccc}
-      \hline
-      \textbf{Modifier}
-        & \shortstack{unrelated class,\\same assembly}
-        & \shortstack{derived class,\\same assembly}
-        & \shortstack{derived class,\\other assembly}
-        & \shortstack{anywhere\\else}\\
-      \hline
-      \texttt{internal}           & yes & yes & no  & no\\
-      \texttt{protected}          & no  & yes & yes & no\\
-      \texttt{protected internal} & yes & yes & yes & no\\
-      \texttt{private protected}  & no  & yes & no  & no\\
-      \hline
-    \end{tabular}
-  \end{center}
-  \vspace{1ex}
-
-  \hint{The unit of accessibility is the assembly, in Unity determined by the
-  \texttt{.asmdef} files. Without any, all scripts end up in
-  \texttt{Assembly-CSharp}, where \texttt{internal} is effectively
-  \texttt{public} and \texttt{private protected} collapses to
-  \texttt{protected}.}
 \end{frame}
 
 \begin{exerciseframe}{One File, Two Namespaces}
@@ -740,6 +704,60 @@ namespace Company.View
   them is an error.}
 \end{solutionframe}
 
+\subsection{Access Modifiers}
+
+\begin{frame}{Access Modifiers}
+  \framelabel{slide:access}
+  \begin{itemize}
+    \item Java: \texttt{public}, \texttt{protected}, \texttt{private},
+      and \emph{package-private} (the default -- no keyword).
+    \item C\#: \texttt{public}, \texttt{protected}, \texttt{private},
+      \texttt{internal} (visible within the whole assembly, not just a
+      folder/package), plus combinations
+      \texttt{protected internal} and \texttt{private protected} (see below).
+    \item C\# has no direct equivalent of Java's package-private; the
+      default access (with no modifier) is \texttt{private} for members
+      and \texttt{internal} for top-level types.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Access Modifiers: The Two Combinations}
+  \begin{itemize}
+    \item \texttt{protected internal} means protected \emph{or} internal and is
+      therefore \emph{wider} than either part alone: the whole assembly plus
+      derived classes everywhere.
+    \item \texttt{private protected} means protected \emph{and} internal and is
+      therefore \emph{narrower} than either part alone: only derived classes
+      within the same assembly.
+  \end{itemize}
+  \vspace{1ex}
+
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{lcccc}
+      \hline
+      \textbf{Modifier}
+        & \shortstack{unrelated class,\\same assembly}
+        & \shortstack{derived class,\\same assembly}
+        & \shortstack{derived class,\\other assembly}
+        & \shortstack{anywhere\\else}\\
+      \hline
+      \texttt{internal}           & yes & yes & no  & no\\
+      \texttt{protected}          & no  & yes & yes & no\\
+      \texttt{protected internal} & yes & yes & yes & no\\
+      \texttt{private protected}  & no  & yes & no  & no\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{1ex}
+
+  \hint{The unit of accessibility is the assembly, in Unity determined by the
+  \texttt{.asmdef} files. Without any, all scripts end up in
+  \texttt{Assembly-CSharp}, where \texttt{internal} is effectively
+  \texttt{public} and \texttt{private protected} collapses to
+  \texttt{protected}.}
+\end{frame}
+
 \begin{exerciseframe}{The Default Access Modifier}
   This does not compile. Explain why, using the rule from
   \slideref{slide:access},
@@ -780,6 +798,8 @@ CS0050: Inconsistent accessibility: return type
   \hint{Nested types default to \texttt{private} rather than
   \texttt{internal} -- the default depends on where the type is declared.}
 \end{solutionframe}
+
+\subsection{Delegates, Lambdas, and Events}
 
 \begin{frame}{Delegates, Lambdas, and Events}
   \begin{itemize}
@@ -1010,6 +1030,8 @@ static bool Retry(int times, Func<bool> attempt)
   there nothing to return, \texttt{Action} would be the counterpart.}
 \end{solutionframe}
 
+\subsection{Operator Overloading}
+
 \begin{frame}[fragile]{Operator Overloading}
   \framelabel{slide:operators}
   \begin{itemize}
@@ -1083,6 +1105,8 @@ public static bool operator !=(Money a, Money b)
   overloading \texttt{==}, see \slideref{slide:operators}.}
 \end{solutionframe}
 
+\subsection{Exceptions}
+
 \begin{frame}{Exceptions}
   \begin{itemize}
     \item Java distinguishes \emph{checked} exceptions (must be declared
@@ -1133,6 +1157,8 @@ try {
   is missing is the compiler forcing you to handle anything, which moves the
   burden to documentation and reviews.}
 \end{solutionframe}
+
+\subsection{Collections}
 
 \begin{frame}[fragile]{Collections: Streams vs.\ LINQ}
   \framelabel{slide:linq}
@@ -1191,6 +1217,8 @@ Console.WriteLine(query.Count());
   an expensive query more than once.}
 \end{solutionframe}
 
+\subsection{Small Syntax Differences}
+
 \begin{frame}[fragile]{Small Syntax Differences}
   \begin{itemize}
     \item String interpolation: \texttt{\$"Hello, \{name\}!"} in C\#
@@ -1214,6 +1242,8 @@ Console.WriteLine(query.Count());
   \hint{Do not use \texttt{var}. You would suppress important type information.}
 
 \end{frame}
+
+\subsection{Extension Methods}
 
 \begin{frame}[fragile]{Extension Methods}
   \framelabel{slide:extensions}
@@ -1369,6 +1399,8 @@ Derived
   \hint{Resolution takes place at compile time on the static type. Extension
   methods are therefore a poor fit wherever polymorphic behavior is wanted.}
 \end{solutionframe}
+
+\subsection{Overriding and Hiding}
 
 \begin{frame}[fragile]{Virtual and Override}
   \framelabel{slide:virtual}

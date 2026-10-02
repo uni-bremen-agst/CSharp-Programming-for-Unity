@@ -56,6 +56,8 @@
   the older corners of any code base.
 \end{frame}
 
+\subsection{Coroutines}
+
 \begin{frame}[fragile]{Coroutines: A Method That Can Pause}
   \framelabel{slide:coroutine}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -235,6 +237,8 @@ yield break;                              // stop here
   because they do not depend on the player loop. Anything built on
   \texttt{StartCoroutine} forces the test into play mode.}
 \end{solutionframe}
+
+\subsection{async and await}
 
 \begin{frame}[fragile]{\texttt{async} and \texttt{await}}
   \framelabel{slide:asyncawait}
@@ -485,6 +489,8 @@ private async UniTaskVoid Start()
   slower machine.}
 \end{solutionframe}
 
+\subsection{Cancellation}
+
 \begin{frame}{Why Cancel at All?}
   An operation worth starting a second ago may be pointless now: the user
   closes the city, reloads it from another GXL file, or leaves play mode ---
@@ -714,6 +720,8 @@ private async UniTask AddMetricsAsync(Graph graph, CancellationToken token)
   \hint{SEE wraps this whole pattern in \texttt{AsyncUtils.RunWithTimeoutAsync}.}
 \end{solutionframe}
 
+\subsection{Task}
+
 \begin{frame}[fragile]{\texttt{Task}: What the Rest of .NET Speaks}
   \framelabel{slide:task}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -770,6 +778,8 @@ await Task.Run(() => Parse(file));  // and never touch Unity in there
   \end{itemize}
 \end{frame}
 
+\subsection{UniTask}
+
 \begin{frame}{UniTask: Why Not \texttt{Task}?}
   \texttt{Task} was designed for servers: thread pools, work stealing, many
   cores. A game has one main thread, a few milliseconds per frame, and must not
@@ -813,6 +823,8 @@ await UniTask.RunOnThreadPool(() => Parse(file), cancellationToken: token);
   awaited one after the other take the sum of their durations, awaited
   together they take the maximum.
 \end{frame}
+
+\subsection{Switching Threads}
 
 \begin{frame}[fragile]{Leaving and Returning to the Main Thread}
   \framelabel{slide:mainthread}
@@ -889,6 +901,8 @@ private async UniTask<int> CountAsync(GameObject root, string file)
   program on a worker thread.}
 \end{solutionframe}
 
+\subsection{Fire and Forget}
+
 \begin{frame}[fragile]{Fire and Forget, on Purpose}
   \framelabel{slide:forget}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -916,6 +930,8 @@ private static async UniTaskVoid ShowDeletionNotificationAsync(string text)
       matters.
   \end{itemize}
 \end{frame}
+
+\subsection{From Coroutine to UniTask}
 
 \begin{frame}[fragile]{From Coroutine to UniTask}
   \begin{center}
@@ -993,6 +1009,8 @@ private async UniTask<bool> PollServerAsync(CancellationToken token)
   \texttt{DelayType.DeltaTime}.}
 \end{solutionframe}
 
+\subsection{Data Races}
+
 \begin{frame}[fragile]{Two Threads, One Field}
   \framelabel{slide:race}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -1043,6 +1061,8 @@ private async UniTask LoadAsync(string file)
   \hint{Before reaching for a lock, ask whether the data needs to be a field
   at all. The frames that follow are for the cases where it does.}
 \end{frame}
+
+\subsection{Locks}
 
 \begin{frame}[fragile]{What \texttt{lock} Guarantees}
   \framelabel{slide:lock}
@@ -1145,6 +1165,8 @@ lock (first)                     lock (second)
   \end{itemize}
 \end{frame}
 
+\subsection{Alternatives to Locks}
+
 \begin{frame}[fragile]{Prefer a Concurrent Collection}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Graphs/Utils/ThreadSafeHashSet.cs: a set from a dictionary
@@ -1197,6 +1219,8 @@ finally { await UniTask.SwitchToMainThread(); }
   \hint{Ask who else can reach the object before you ask which lock to take.
   The answer is often nobody, and then \slideref{slide:race} cannot happen.}
 \end{frame}
+
+\subsection{Conventions in SEE}
 
 \begin{frame}{Conventions in SEE}
   \begin{itemize}

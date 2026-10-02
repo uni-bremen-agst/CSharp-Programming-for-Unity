@@ -80,6 +80,8 @@ public Node Target { get; set; }
   --- and the edges as the arcs between the blocks.
 \end{frame}
 
+\subsection{Node and Edge Types}
+
 \begin{frame}[fragile]{Types Are Just Strings}
   \framelabel{slide:types}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -133,6 +135,8 @@ public NodeTypeVisualsMap NodeTypes = new();
   \end{itemize}
 \end{frame}
 
+\subsection{GXL Files}
+
 \begin{frame}[fragile]{GXL In, GXL Out}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Graphs/IO/GXL/GraphWriter.cs
@@ -176,6 +180,8 @@ public static async UniTask<Graph> LoadAsync(DataPath path,
   several types does not survive a round trip unchanged.
 \end{frame}
 
+\subsection{Attributes}
+
 \begin{frame}[fragile]{Metrics Are Attributes}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Graphs/Core/StandardNames.cs
@@ -217,6 +223,8 @@ public string SourceName { ... }
   \texttt{ShowCodeAction} asks the graph element where it came from, and the
   code viewer follows.
 \end{frame}
+
+\subsection{Separation from Unity}
 
 \begin{frame}[fragile]{The Graph Knows Nothing of Unity}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -316,6 +324,8 @@ GameObject gameEdge = GraphElementIDMap.Find(edge.ID);
 \end{frame}
 
 
+\subsection{Kinds of Cities}
+
 \begin{frame}[fragile]{The Family of Cities}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 AbstractSEECity                  the component, the settings, the node types
@@ -336,6 +346,8 @@ AbstractSEECity                  the component, the settings, the node types
   below \texttt{SEECity} differs only in where the graph comes from and what
   extra structure it carries.
 \end{frame}
+
+\subsection{Declaring Settings}
 
 \begin{frame}[fragile]{Settings Are Annotated, Not Coded}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -358,6 +370,8 @@ public SingleGraphPipelineProvider DataProvider = new();
       a setting means adding a field, not writing user interface code.
   \end{itemize}
 \end{frame}
+
+\subsection{Configuring a City}
 
 \begin{frame}[fragile]{A User Decides how a City is Rendered}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -538,7 +552,7 @@ public abstract class MultiGraphProvider
     \item \texttt{Dissonance} carries the voice chat, with a text chat
       alongside it for whatever is easier typed than said.
     \item \texttt{Game/Drawable} adds whiteboards to draw on together, shared
-      through the very net actions this subsection is about
+      through the net actions of the next subsection
       (\texttt{Net/Actions/Drawable}).
   \end{itemize}
 \end{frame}
@@ -611,6 +625,8 @@ public abstract class MultiGraphProvider
     \item A host is a server and client on the same machine.
   \end{itemize}
 \end{frame}
+
+\subsection{Net Actions}
 
 \begin{frame}[fragile]{Every Change Happens Twice}
   \framelabel{slide:netaction}

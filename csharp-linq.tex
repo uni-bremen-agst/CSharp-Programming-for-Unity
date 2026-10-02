@@ -17,6 +17,8 @@
 
 \end{frame}
 
+\subsection{Collections and IEnumerable}
+
 \begin{frame}{Collections: Java and C\#}
   \begin{center}
     \footnotesize
@@ -61,6 +63,8 @@
   and as \texttt{IList<T>} or \texttt{ISet<T>} when you need indexing, counting
   or membership tests.}
 \end{frame}
+
+\subsection{Operators and Query Syntax}
 
 \begin{frame}{The Operators we Actually Use in SEE}
   \begin{itemize}
@@ -117,6 +121,8 @@ nodes.Where(n => n.Type == "Class")
   expression.}
 \end{frame}
 
+\subsection{LINQ in SEE}
+
 \begin{frame}[fragile]{LINQ in SEE}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Graph.cs: all node types occurring in a graph
@@ -162,6 +168,8 @@ graph.Nodes().WithGameObject().Select(n => n.ID);
   \texttt{Toggle}.}
 \end{frame}
 
+\subsection{Pitfalls}
+
 \begin{frame}[fragile]{Pitfalls}
   \begin{itemize}
     \item A query describes work rather than doing it. Enumerating it twice
@@ -182,6 +190,8 @@ enumeration operation may not execute.
   \texttt{nodes.Where(\ldots).ToList()} when the loop body adds to or removes
   from \texttt{nodes}.}
 \end{frame}
+
+\subsection{Exercises}
 
 \begin{exerciseframe}{From Loop to Query}
   Replace the loop by a single LINQ chain yielding the same list.

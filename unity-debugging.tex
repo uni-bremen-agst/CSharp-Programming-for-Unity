@@ -9,7 +9,7 @@
 %%% Every example is taken from SEE, so the sources named in the listings can
 %%% be opened next to the slide.
 
-\subsection{Console and Debugger}
+\subsection{The Console}
 
 \begin{frame}[fragile]{The Console, and How to Get More from It}
   \framelabel{slide:console}
@@ -37,6 +37,8 @@ public static bool InternalLoggingEnabled = true;
       \texttt{LogAssert.Expect}.
   \end{itemize}
 \end{frame}
+
+\subsection{Failing Early}
 
 \begin{frame}[fragile]{Fail Where the Cause Is}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -66,6 +68,8 @@ public static T MustGetComponent<T>(this GameObject gameObject)
   a session with others.
 \end{frame}
 
+\subsection{Breakpoints}
+
 \begin{frame}{Breakpoints, and What They Hide}
   \begin{itemize}
     \item Rider and Visual Studio attach to the running Editor, and SEE ships
@@ -86,7 +90,7 @@ public static T MustGetComponent<T>(this GameObject gameObject)
   \end{itemize}
 \end{frame}
 
-\subsection{Profiling}
+\subsection{The Unity Profiler}
 
 \begin{frame}{Measure, Then Change}
   \framelabel{slide:profiler}
@@ -108,6 +112,8 @@ public static T MustGetComponent<T>(this GameObject gameObject)
       that timeline.
   \end{itemize}
 \end{frame}
+
+\subsection{Timing Whole Operations}
 
 \begin{frame}[fragile]{Two Time Scales}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -134,6 +140,8 @@ p.End();
 
   \hint{\textit{Performance} is a class written by SEE developers.}
 \end{frame}
+
+\subsection{Profiling Asynchronous Code}
 
 \begin{frame}[fragile]{An Async Method Has No Row in the Unity Profiler}
   \framelabel{slide:asyncprofiling}
@@ -218,6 +226,8 @@ finally { Profiler.EndThreadProfiling(); }
   \end{itemize}
 \end{frame}
 
+\subsection{dotTrace}
+
 \begin{frame}{A Profiler That Sees Every Thread}
   \framelabel{slide:dottrace}
   \begin{itemize}
@@ -281,6 +291,8 @@ DeepProfiler.Save();
   profiling type hardly matters here; the Timeline type of the Unity preset
   works.}
 \end{frame}
+
+\subsection{Choosing a Tool}
 
 \begin{exerciseframe}{Which Tool?}
   \begin{enumerate}

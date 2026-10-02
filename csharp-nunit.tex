@@ -29,6 +29,8 @@
   which one to put a new test into is half of what this lecture is about.}
 \end{frame}
 
+\subsection{Test Assemblies}
+
 \begin{frame}{Two Assemblies, Two Kinds of Test}
   \begin{center}
     \footnotesize
@@ -87,6 +89,8 @@
   \emph{Create EditMode Test Assembly Folder} generates folder and
   \texttt{.asmdef} together.}
 \end{frame}
+
+\subsection{Edit Mode versus Play Mode}
 
 \begin{frame}{Edit Mode versus Play Mode}
   \framelabel{slide:editvsplay}
@@ -155,6 +159,8 @@
   it is what a testable architecture looks like.}
 \end{solutionframe}
 
+\subsection{A First Test}
+
 \begin{frame}[fragile]{An Edit-Mode Test}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEETests/Utils/TestFilenames.cs
@@ -181,6 +187,8 @@ namespace SEE.Utils
   may hold any number of \texttt{[Test]} methods; each one runs independently.
 
 \end{frame}
+
+\subsection{Assertions}
 
 \begin{frame}[fragile]{Assertions: Two Models}
   NUnit offers a classic and a newer constraint-based assertion model.
@@ -317,6 +325,8 @@ Assert.DoesNotThrow(() => graph.AddNode(node));
   method you need \texttt{Assert.ThrowsAsync<T>}, because otherwise you assert
   about the returned \texttt{Task} rather than about the failure.}
 \end{frame}
+
+\subsection{Fixture Lifecycle}
 
 \begin{frame}[fragile]{Fixture Lifecycle}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -455,6 +465,8 @@ OnceBase
   isolation, in parallel, or one alone.}
 \end{solutionframe}
 
+\subsection{Parameterized Tests}
+
 \begin{frame}[fragile]{Parameterized Tests}
   \framelabel{slide:parameterized}
   One test method, many cases. Each case is reported separately, so you see
@@ -557,6 +569,8 @@ public void TestBasename(string path, string expected)
   adding it.}
 \end{solutionframe}
 
+\subsection{Asynchronous Tests}
+
 \begin{frame}[fragile]{Asynchronous Tests}
   An edit-mode test may be \texttt{async} and return \texttt{Task}. NUnit awaits
   it and fails the test if the task faults.
@@ -586,6 +600,33 @@ public async Task TestGXLGraphProviderAsync()
   returns \texttt{void} but contains \texttt{await} is a green test that
   verifies nothing.}
 \end{frame}
+
+\begin{frame}[fragile]{Asynchronous Code in Tests}
+    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+        // Assets/SEETests/Graphs/IO/TestGraphIO.cs
+        // NUnit awaits a Task directly
+        [Test, Sequential]
+        public async Task TestGraphWriter([Values(true, false)] bool compress)
+        { ... }
+
+        // Assets/SEETests/Utils/Paths/TestDataPath.cs
+        // UniTask bridged into [UnityTest]
+        [UnityTest]
+        public IEnumerator LoadFromFile() =>
+        UniTask.ToCoroutine(async () =>
+        {
+            using Stream stream = await dataPath.LoadAsync();
+            Assert.That(Read(stream), Is.EqualTo(content));
+        });
+    \end{lstlisting}
+    \vspace{1ex}
+
+    \texttt{UniTask.ToCoroutine} wraps an asynchronous lambda into the
+    \texttt{IEnumerator} that \texttt{[UnityTest]} expects. Note that both of
+    these live in the \emph{edit-mode} assembly: neither needs the player loop.
+\end{frame}
+
+\subsection{Play-Mode Tests}
 
 \begin{frame}[fragile]{Play-Mode Tests}
   A \texttt{[UnityTest]} returns \texttt{IEnumerator} and is driven as a
@@ -691,6 +732,8 @@ public IEnumerator TestRotation()        // 2: must be public
   the next test. That is what \texttt{[UnityTearDown]} is for.}
 \end{solutionframe}
 
+\subsection{Expected Log Messages}
+
 \begin{frame}[fragile]{Unity-Specific Assertions: LogAssert}
   Unity treats a logged error as a test failure. When the code under test is
   \emph{supposed} to log an error, you have to announce it.
@@ -764,6 +807,8 @@ public void TestMissingFile()
   test green, and every future error in the reader along with it.}
 \end{solutionframe}
 
+\subsection{[UnityTest] outside Play Mode}
+
 \begin{frame}[fragile]{[UnityTest] outside Play Mode}
   \texttt{[UnityTest]} is not the same as ``play-mode test''. It also works in
   an edit-mode assembly, where \texttt{yield} means \emph{one editor update}
@@ -791,6 +836,8 @@ public IEnumerator LoadFromForeignServer() =>
   \hint{Which mode a test runs in is decided by the \emph{assembly} it sits in,
   never by its attributes. \texttt{[UnityTest]} only decides how it is driven.}
 \end{frame}
+
+\subsection{Skipping Tests}
 
 \begin{frame}{Skipping Tests: Four Different Reasons}
   \begin{center}
@@ -940,6 +987,8 @@ if (string.IsNullOrWhiteSpace(repo.AccessToken))
   \texttt{TestReflexionAnalysisStress}.}
 \end{solutionframe}
 
+\subsection{Running Tests}
+
 \begin{frame}{Running Tests in the Editor}
   \textbf{Window \(\rightarrow\) General \(\rightarrow\) Test Runner}
   \vspace{1ex}
@@ -990,6 +1039,8 @@ Unity -runTests -batchmode -projectPath . \
   \hint{Unity refuses to open the same project twice. Close the Editor first,
   or point \texttt{-projectPath} at a separate clone.}
 \end{frame}
+
+\subsection{Custom Attributes}
 
 \begin{frame}[fragile]{Writing Your Own Attribute: Declaring it}
   The framework is extensible: an attribute implementing
@@ -1044,30 +1095,7 @@ public IEnumerator TestMenuOption1()
   vocabulary grows.}
 \end{frame}
 
-\begin{frame}[fragile]{Asynchronous Code in Tests}
-    \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-        // Assets/SEETests/Graphs/IO/TestGraphIO.cs
-        // NUnit awaits a Task directly
-        [Test, Sequential]
-        public async Task TestGraphWriter([Values(true, false)] bool compress)
-        { ... }
-
-        // Assets/SEETests/Utils/Paths/TestDataPath.cs
-        // UniTask bridged into [UnityTest]
-        [UnityTest]
-        public IEnumerator LoadFromFile() =>
-        UniTask.ToCoroutine(async () =>
-        {
-            using Stream stream = await dataPath.LoadAsync();
-            Assert.That(Read(stream), Is.EqualTo(content));
-        });
-    \end{lstlisting}
-    \vspace{1ex}
-
-    \texttt{UniTask.ToCoroutine} wraps an asynchronous lambda into the
-    \texttt{IEnumerator} that \texttt{[UnityTest]} expects. Note that both of
-    these live in the \emph{edit-mode} assembly: neither needs the player loop.
-\end{frame}
+\subsection{Conventions in SEE}
 
 \begin{frame}{Conventions in SEE}
   \begin{itemize}
