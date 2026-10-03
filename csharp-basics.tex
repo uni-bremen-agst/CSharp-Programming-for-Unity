@@ -386,7 +386,7 @@ public static bool Restore<T>(Dictionary<string, object> attributes,
       widening conversion.
     \item SEE makes both choices on purpose. \texttt{ConfigIO} stores every
       value as \texttt{object} --- configuration is read once at startup.
-      \texttt{Attributable} keeps a typed dictionary per attribute type, since
+      \texttt{Attributable} keeps a typed dictionary per attribute type (e.g., \texttt{Dictionary<string, int>}), since
       node attributes are read constantly.
   \end{itemize}
 \end{frame}
@@ -870,7 +870,7 @@ static void Process(List<int> items, Action<int> onEach) {
 }
 
 static int Reduce(List<int> items, int seed,
-                   Func<int, int, int> combine) {
+                  Func<int, int, int> combine) {
   int result = seed;
   foreach (int item in items) result = combine(result, item);
   return result;
@@ -989,6 +989,7 @@ int odds = Sum(numbers, n => n % 2 != 0);    // 4
 \begin{exerciseframe}{Behavior as a Parameter}
   Implement \texttt{Retry} so that it calls \texttt{attempt} at most
   \texttt{times} times and yields \texttt{true} as soon as one call succeeds.
+  If all attempts failed, \texttt{false} is returned.
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
@@ -1044,7 +1045,7 @@ static bool Retry(int times, Func<bool> attempt)
 public static Vector3 operator +(Vector3 a, Vector3 b)
   => new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
   \end{lstlisting}
-  \pause
+
   \vfill
 
   \hint{The \texttt{==} operator for \texttt{GameObject} in Unity is overloaded.
@@ -1119,7 +1120,7 @@ public static bool operator !=(Money a, Money b)
 \end{frame}
 
 \begin{exerciseframe}{A Signature Without throws}
-  Port this method to C\#. What becomes of the \texttt{throws} clause, and what
+  Port this Java method to C\#. What becomes of the \texttt{throws} clause, and what
   happens if the caller leaves out the \texttt{try}?
   \vspace{1ex}
 
@@ -1143,7 +1144,7 @@ try {
 
 \begin{solutionframe}{A Signature Without throws}
   \begin{itemize}
-    \item The clause simply disappears, as no \texttt{throws} exists in C\#:
+    \item The clause simply disappears, as no \texttt{throws} exists in C\#:\\
       \texttt{static string ReadFirstLine(string path)}.
     \item Leaving out the \texttt{try} still compiles. Nothing reminds the
       caller, the exception propagates and terminates the program. Unity logs it
@@ -1239,7 +1240,7 @@ Console.WriteLine(query.Count());
   \end{itemize}
   \vfill
 
-  \hint{Do not use \texttt{var}. You would suppress important type information.}
+  \hint{Do not use \texttt{var}. You would suppress important type information for a human reader.}
 
 \end{frame}
 
@@ -1405,7 +1406,7 @@ Derived
 \begin{frame}[fragile]{Virtual and Override}
   \framelabel{slide:virtual}
   \begin{itemize}
-    \item Java: every method is virtual, and \texttt{@Override} is an optional
+    \item Java: every instance method is virtual, and \texttt{@Override} is an optional
       annotation letting the compiler check your intention.
     \item C\#: a method is \emph{not} virtual by default. The base class has to
       offer \texttt{virtual} (or \texttt{abstract}), and the derived class has to
@@ -1477,6 +1478,7 @@ Sub
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 List<int> numbers = new();   // really ints: no boxing, no Integer
 
+// Let T be a type parameter of a generic type.
 Type t = typeof(T);          // the actual type argument, at run time
 bool b = x is T;             // works
 T fresh = new T();           // legal -- with a new() constraint
@@ -1498,13 +1500,13 @@ T[] array = new T[10];       // legal
   \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Constraints: What You Promise About \texttt{T}}
+\begin{frame}[fragile]{Constraints: What You Promise About Type Parameter \texttt{T}}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-where T : GraphElement              // a base class: use its members
-where T : Component                 // Unity's Component
+where T : GraphElement                  // base class of Node and Edge
+where T : Component                     // Unity's Component
 where T : IPersistentConfigItem, new()  // an interface, and constructible
-where E : struct, Enum              // a concrete enumeration type
-where T : class                     // any reference type
+where E : struct, Enum                  // a concrete enumeration type
+where T : class                         // any reference type
   \end{lstlisting}
   \vspace{1ex}
 
@@ -1516,7 +1518,7 @@ where T : class                     // any reference type
       its members, \texttt{new()} lets you construct a \texttt{T},
       \texttt{struct} and \texttt{class} settle boxing and nullability.
     \item Constraints combine, and sometimes must. \texttt{ConfigIO.RestoreEnum}
-      needs both halves of \texttt{struct, Enum}: \texttt{Enum.TryParse<E>}
+      needs both \texttt{struct} and \texttt{Enum}: \texttt{Enum.TryParse<E>}
       demands a value type, and \texttt{Enum} alone would still admit
       \texttt{System.Enum} itself.
   \end{itemize}
@@ -1525,9 +1527,9 @@ where T : class                     // any reference type
 \begin{frame}[fragile]{One Algorithm, Two Element Types}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Graphs/Core/MergeDiffGraphExtension.cs
-private static void MergeGraphElements<T>(ISet<T> added, ISet<T> removed,
-        ISet<T> changed, Action<T> addToGraph, Graph baseline)
-    where T : GraphElement
+private static void MergeGraphElements<T>
+       (ISet<T> added, ISet<T> removed, ISet<T> changed,
+        Action<T> addToGraph, Graph baseline) where T : GraphElement
 {
     added.ForEach(e => e.SetToggle(ChangeMarkers.IsNew));   // needs the
     ...                                                     // constraint
@@ -1547,7 +1549,7 @@ MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
       \texttt{AddNode} in one case and \texttt{AddEdge} in the other, checked
       at compile time.
     \item The alternative --- parameters of type \texttt{GraphElement} and a
-      cast at every use --- gives up exactly that check.
+      cast at every use --- gives up exactly that compile-time check.
   \end{itemize}
 \end{frame}
 
@@ -1555,10 +1557,12 @@ MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
   \begin{enumerate}
     \item Two methods differ only in their element type: one returns the
       \texttt{Node} with the largest value of a metric, the other the
-      \texttt{Edge}. Merge them into one method. Which constraint do you need,
-      and what breaks without it?
-    \item \texttt{ConfigIO.RestoreList<T>} is declared \texttt{where T :
-      IPersistentConfigItem, new()} and its body says \texttt{T t = new();}.
+      \texttt{Edge}. Which constraint do you need if you were to merge them
+      into one method and what breaks without it?
+    \item \texttt{ConfigIO.RestoreList<T>} is declared as:\\
+      \hspace{3ex}\texttt{where T : IPersistentConfigItem, new()}\\
+      and its body says:\\
+      \hspace{3ex}\texttt{T t = new();}\\
       It could have called \texttt{Activator.CreateInstance} instead --- why is
       the constraint better?
   \end{enumerate}
@@ -1571,7 +1575,7 @@ MergeGraphElements(addedEdges, removedEdges, changedEdges, ...);  // edges
       inherited by \texttt{GraphElement}. Without the constraint \texttt{T} is
       an \texttt{object} and no member of it is in scope.
     \item Both construct a \texttt{T}, but \texttt{new()} is checked when the
-      code is compiled, and by the \emph{caller}: a type without a public
+      code is compiled, and by the \emph{caller}\,: a type without a public
       parameterless constructor cannot even be passed.
       \texttt{Activator.CreateInstance} moves the same requirement to run time,
       where it becomes an exception --- the trade-off of
