@@ -24,7 +24,8 @@
     \item \emph{Annotations}, in C\# called \emph{attributes}, are the notes
       you leave in that metadata for such a reader to find.
     \item Both live at the edges of a program: frameworks, factories, editors,
-      serialization. In the middle of your code they are the wrong tool.
+      serialization. In the middle of your code they are the wrong tool most
+      of the time.
   \end{itemize}
   \vspace{2ex}
 
@@ -150,17 +151,17 @@ public bool debugLog;                         // in the metadata
 
 \begin{frame}[fragile]{Reading Annotations}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// one of them, if it is there at all -- inherit is true unless you say so
+// Assets/SEE/UI/RuntimeConfigMenu/RuntimeTabMenu.cs
+// one of them, if it is there at all -- default of inherit: true
 RuntimeTabAttribute tab = member.GetCustomAttribute<RuntimeTabAttribute>();
 RuntimeTabAttribute own =
     member.GetCustomAttribute<RuntimeTabAttribute>(inherit: false);
 
-// all of them, to filter -- Assets/SEE/UI/RuntimeConfigMenu/RuntimeTabMenu.cs
+// all of them, to filter
 if (member.GetCustomAttributes().Any(a => a is ObsoleteAttribute)) { ... }
 string name = member.GetCustomAttributes().OfType<RuntimeTabAttribute>()
                     .FirstOrDefault()?.Name;
   \end{lstlisting}
-  \vspace{1ex}
 
   \begin{itemize}
     \item The attribute object is constructed when you ask for it, from the
@@ -171,8 +172,7 @@ string name = member.GetCustomAttributes().OfType<RuntimeTabAttribute>()
       properties and events; the \texttt{Attribute} helpers behind the
       extension methods above do emulate it.}
     \item Nothing at all happens without a reader. Unity's inspector, NUnit's
-      runner and SEE's runtime configuration menu are such readers --- and in
-      the next exercises, so are you.
+      runner and SEE's runtime configuration menu are such readers.
   \end{itemize}
 \end{frame}
 
