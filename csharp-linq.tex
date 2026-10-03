@@ -12,7 +12,7 @@
 
   \begin{itemize}
     \item Instead of writing custom loops and conditional statements to filter, sort, or transform data, LINQ allows you to write highly readable, declarative queries.
-    \item The best part of LINQ is its versatility: you use the exact same syntax to query in-memory collections (like List<T> or arrays), databases (via Entity Framework), or XML files.
+    \item The best part of LINQ is its versatility: you use the exact same syntax to query in-memory collections (like \texttt{List<T>} or arrays), databases (via Entity Framework), or XML files.
   \end{itemize}
 
 \end{frame}
@@ -24,7 +24,7 @@
     \footnotesize
     \begin{tabular}{lll}
       \hline
-      \textbf{Java} & \textbf{C\#} & \textbf{Kind}\\
+      \textbf{Java} & \textbf{C\#} & \textbf{Kind in C\#}\\
       \hline
       \texttt{ArrayList<T>}  & \texttt{List<T>}            & class\\
       \texttt{List<T>}       & \texttt{IList<T>}           & interface\\
@@ -118,7 +118,7 @@ nodes.Where(n => n.Type == "Class")
   \vspace{4ex}
 
   \hint{SEE currently uses method syntax exclusively: its sources contain no single query
-  expression.}
+  expression as of today.}
 \end{frame}
 
 \subsection{LINQ in SEE}
@@ -237,7 +237,7 @@ List<string> result = nodes.Where(n => n.Type == "Class")
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
-// three nodes, carrying 2, 2 and 0 children
+// three child nodes, carrying 2, 2 and 0 children
 Console.WriteLine(nodes.Select(n => n.Children).Count());
 Console.WriteLine(nodes.SelectMany(n => n.Children).Count());
   \end{lstlisting}
@@ -262,13 +262,16 @@ Console.WriteLine(nodes.SelectMany(n => n.Children).Count());
 \end{solutionframe}
 
 \begin{exerciseframe}{An Index by Type}
+  Given a variable \texttt{nodes} of type \texttt{IEnumerable<Node>}.
   Build a dictionary mapping every node type to the list of nodes of that type,
-  in a single chain. What does it yield for the three nodes below?
+  in a single chain.
+
+  What does it yield for the three nodes below?
   \vspace{1ex}
 
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // A and B are of type "Class", C is of type "File".
-Dictionary<string, List<Node>> byType = // your chain here
+Dictionary<string, List<Node>> byType = nodes ...// your chain here
   \end{lstlisting}
   \vspace{1ex}
 
@@ -281,7 +284,7 @@ Dictionary<string, List<Node>> byType
   = nodes.GroupBy(n => n.Type)
          .ToDictionary(g => g.Key, g => g.ToList());
 
-// Class = 2, File = 1
+// {Class => [A, B], File => [C]}
   \end{lstlisting}
   \begin{itemize}
     \item \texttt{GroupBy} yields a sequence of groups, each an
