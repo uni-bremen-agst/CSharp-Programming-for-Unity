@@ -118,8 +118,7 @@ m.SetFloat("_Metallic", 0.5f);    // by name: a string lookup every call
 
 // Assets/SEE/Game/Portal.cs -- the name is looked up once
 private const string portalPropertyName = "_Portal";
-private static readonly int portalProp =
-    Shader.PropertyToID(portalPropertyName);
+private static readonly int portalProp = Shader.PropertyToID(portalPropertyName);
   \end{lstlisting}
   \vspace{1ex}
 
@@ -174,7 +173,7 @@ renderer.sharedMaterial = existingMaterial; // assigns the shared asset
       without creating a thousand materials. How many do you need, and what
       does each cube have to store?
   \end{enumerate}
-  \vspace{1ex}
+  \vspace{3ex}
 
   \hint{Part two is what a code city does for every metric it maps to color.}
 \end{exerciseframe}
