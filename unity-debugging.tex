@@ -29,7 +29,7 @@ public static bool InternalLoggingEnabled = true;
   \begin{itemize}
     \item That second argument of \texttt{Log*} is the part almost everybody forgets: it makes
       the entry clickable and selects that game object in the hierarchy. SEE
-      passes it in a single place.
+      is guilty of this forgetting, too.
     \item A log line is not free. It builds a string and walks the stack, so
       it does not belong in code that runs every frame.
     \item An unexpected \texttt{LogError} fails a Unity test, even one that is
