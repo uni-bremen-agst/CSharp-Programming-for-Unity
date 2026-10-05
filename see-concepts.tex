@@ -150,12 +150,12 @@ public static void Save(string filename, Graph graph,
   GXL is the \emph{Graph eXchange Language}, an XML-based format for handing
   graphs from one tool to the next. It comes out of the software engineering,
   graph drawing and graph grammar communities, and it is what SEE both reads
-  and writes. Its syntax is not worth your time: the wiki describes the dialect
-  SEE accepts, the one defined by the Axivion
-  Suite.\footnote{\url{https://github.com/uni-bremen-agst/SEE/wiki/GXL}}
+  and writes. Its syntax is not worth your time: the SEE Wiki\footnote{\url{https://github.com/uni-bremen-agst/SEE/wiki/GXL}}
+  describes the dialect SEE accepts, the one defined by the Axivion
+  Suite\footnote{\url{https://www.qt.io/quality-assurance/axivion-suite}}.
   \vspace{1ex}
 
-  The graphs shipped with SEE are compressed, which the reader handles by the
+  The graphs shipped with SEE may be compressed, which the reader handles by the
   file name extension, so a city loads a \texttt{.gxl.xz} without anyone
   unpacking anything.
 \end{frame}
@@ -203,7 +203,7 @@ public static async UniTask<int> LoadCsvAsync(Graph graph, DataPath path,
   visual dimension such as height or color.
 \end{frame}
 
-\begin{frame}[fragile]{Where the Code Is}
+\begin{frame}[fragile]{Source Location Information}
   \begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
 // Assets/SEE/Graphs/Core/GraphElement.cs -- nodes and edges alike
 public string Directory { ... }     // "Source.Path"
@@ -310,7 +310,6 @@ public abstract partial class AbstractSEECity : SerializedMonoBehaviour
 // game object -> graph element: read the NodeRef/EdgeRef component
 gameObject.TryGetNode(out Node node);    // false if there is none
 gameObject.TryGetEdge(out Edge edge);
-Node n = gameObject.GetNode();           // throws if there is none
 
 // graph element -> game object: by ID, which is the game object's name
 GameObject gameNode = GraphElementIDMap.Find(node.ID);
@@ -491,10 +490,8 @@ return graph;
       \hline
       Produce a graph      & \texttt{GXLSingleGraphProvider},
                              \texttt{GitBranchesGraphProvider}\\
-      Add to a graph       & \texttt{CSVGraphProvider},
-                             \texttt{JaCoCoGraphProvider},\\
-                           & \texttt{ReportGraphProvider},
-                             \texttt{DashboardGraphProvider}\\
+      Add to a graph       & \texttt{CSVGraphProvider}, \texttt{ReportGraphProvider},\\
+                           & \texttt{DashboardGraphProvider}\\
       Combine graphs       & \texttt{ReflexionGraphProvider},
                              \texttt{MergeDiffGraphProvider}\\
       Hold other providers & \texttt{SingleGraphPipelineProvider}\\
@@ -503,9 +500,9 @@ return graph;
   \end{center}
   \vspace{2ex}
 
-  A typical pipeline reads a GXL file, then adds coverage from JaCoCo, then
-  adds issues from a report. Each step is configured separately and none of
-  them knows about the others.
+  A typical pipeline reads a GXL file, then adds metrics
+  from a report (e.g. coverage from JaCoCo). Each step is configured
+  separately and none of them knows about the others.
   \vspace{1ex}
 
   \hint{The augmenters expect a graph and complain if they get none. Order in
